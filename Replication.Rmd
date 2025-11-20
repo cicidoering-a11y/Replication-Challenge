@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Replication Challenge"
 author: "Lisa Philine Krämer"
 date: "2025-11-20"
 output: html_document
