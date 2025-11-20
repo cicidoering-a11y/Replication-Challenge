@@ -1,0 +1,22 @@
+---
+title: "Untitled"
+author: "Lisa Philine Krämer"
+date: "2025-11-20"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(haven)
+
+
+```
+
+
+```{r}
+data <- read_dta("original&computed_DB_forrep.dta")
+```
+
+```{r}
+summary(data)
+```
+
