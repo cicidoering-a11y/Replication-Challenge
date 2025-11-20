@@ -7,9 +7,12 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(haven)
-
-
+library(ggplot2)
 ```
+
+
+
+
 
 
 ```{r}
@@ -27,4 +30,28 @@ data %>%
     facet_wrap(~ key, scales = "free") +   # In separate panels
     geom_histogram() 
 ```
+
+
+```{r}
+# Count of NAs per column
+colSums(is.na(data))
+
+# Percentage of missing values
+colSums(is.na(data)) / nrow(data) * 100
+
+```
+
+```{r}
+num_vars <- names(Filter(is.numeric, data))
+
+for (v in num_vars) {
+  print(
+    ggplot(data, aes_string(x = v)) +
+      geom_histogram(bins = 30) +
+      ggtitle(paste("Histogram of", v))
+  )
+}
+
+```
+
 
