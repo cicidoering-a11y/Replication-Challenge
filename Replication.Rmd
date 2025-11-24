@@ -133,8 +133,15 @@ plot_ly(
 
 Table 1
 ```{r}
-#Panel 1
-
+#Panel A: Section Level
+Full_Sections <- round(mean(data$dfullsection),2)
+Overtime_Sections <- round(mean(data$section %in% c(10, 20)),2)
+Players_Distance <-
+Players_Sprints <-
+SMGP <- 
+Team_Distance <-
+Observations1 <- nrow(data)
+Observations2 <-
 
 #Panel B
 
@@ -151,8 +158,5 @@ Defenders <- n_distinct(data$player[data$position == 2])
 
 ```
 
-```{r}
 
-
-```
 
