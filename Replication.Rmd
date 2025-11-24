@@ -14,9 +14,6 @@ library(plotly)
 
 
 
-
-
-
 ```{r}
 data <- read_dta("original&computed_DB_forrep.dta")
 ```
@@ -134,4 +131,28 @@ plot_ly(
 
 ```
 
+Table 1
+```{r}
+#Panel 1
+
+
+#Panel B
+
+
+
+#
+Rounds <- n_distinct(data$played)
+Games <- n_distinct(data$gamenu)
+Teams <- n_distinct(data$team)
+Players <- n_distinct(data$player)
+Strikers <- n_distinct(data$player[data$position == 4])
+Midfielders <- n_distinct(data$player[data$position == 3])
+Defenders <- n_distinct(data$player[data$position == 2])
+
+```
+
+```{r}
+
+
+```
 
