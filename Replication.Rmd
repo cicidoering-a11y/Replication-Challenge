@@ -158,5 +158,372 @@ Defenders <- n_distinct(data$player[data$position == 2])
 
 ```
 
+##Prepare Data Sets
+```{r}
+data_base <- data %>%
+  filter(
+    dfullsection == 1,          # full sections only
+    position %in% c(3, 4),      # midfielders + strikers
+    !(section %in% c(10, 20)) 
+  )
+```
 
+```{r}
+data_col1 <- data_base %>%
+  drop_na(dplagoal, plaavspeed) %>%
+  mutate(
+    plaavspeed_c = plaavspeed - mean(plaavspeed, na.rm = TRUE)
+  )
+```
+
+```{r}
+data_col2 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2
+  ) %>%
+  mutate(
+    plaavspeed_c           = plaavspeed - mean(plaavspeed, na.rm = TRUE),
+    rank_gap_c             = rank_gap - mean(rank_gap, na.rm = TRUE),
+    player_cumsections_c   = player_cumsections - mean(player_cumsections, na.rm = TRUE),
+    player_cumsections_2_c = player_cumsections_2 - mean(player_cumsections_2, na.rm = TRUE)
+  )
+```
+
+```{r}
+data_col356 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed, playersprints,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2,
+    scoregap_pre, dteamgoal_pre, dplagoal_pre,
+    dteamred_pre, dteaminj_sec_pre,
+    team_avespeed_pre
+  ) %>%
+  mutate(
+    plaavspeed_c           = plaavspeed - mean(plaavspeed, na.rm = TRUE),
+    playersprints_c        = playersprints - mean(playersprints, na.rm = TRUE),
+    rank_gap_c             = rank_gap - mean(rank_gap, na.rm = TRUE),
+    player_cumsections_c   = player_cumsections - mean(player_cumsections, na.rm = TRUE),
+    player_cumsections_2_c = player_cumsections_2 - mean(player_cumsections_2, na.rm = TRUE),
+    scoregap_pre_c         = scoregap_pre - mean(scoregap_pre, na.rm = TRUE),
+    team_avespeed_pre_c    = team_avespeed_pre - mean(team_avespeed_pre, na.rm = TRUE)
+  )
+```
+
+```{r}
+data_col4 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2,
+    scoregap_pre, dteamgoal_pre, dplagoal_pre,
+    dteamred_pre, dteaminj_sec_pre,
+    team_avespeed_pre,
+    team_crowd, opp_crowd,
+    p_odds_team, p_odds_draw
+  ) %>%
+  mutate(
+    plaavspeed_c           = plaavspeed - mean(plaavspeed, na.rm = TRUE),
+    rank_gap_c             = rank_gap - mean(rank_gap, na.rm = TRUE),
+    player_cumsections_c   = player_cumsections - mean(player_cumsections, na.rm = TRUE),
+    player_cumsections_2_c = player_cumsections_2 - mean(player_cumsections_2, na.rm = TRUE),
+    scoregap_pre_c         = scoregap_pre - mean(scoregap_pre, na.rm = TRUE),
+    team_avespeed_pre_c    = team_avespeed_pre - mean(team_avespeed_pre, na.rm = TRUE),
+    team_crowd_c           = team_crowd - mean(team_crowd, na.rm = TRUE),
+    opp_crowd_c            = opp_crowd - mean(opp_crowd, na.rm = TRUE),
+    p_odds_team_c          = p_odds_team - mean(p_odds_team, na.rm = TRUE),
+    p_odds_draw_c          = p_odds_draw - mean(p_odds_draw, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+#check if n matches table
+nrow(data_col1)
+nrow(data_col2)
+nrow(data_col356) #hier sind 2 observations drin, die eig zu 4 sollen
+nrow(data_col4)
+```
+
+##Column 1
+```{r}
+m_col1_prior <- brm(
+  dplagoal ~ plaavspeed_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col1,
+  family  = bernoulli(link = "logit"),
+  sample_prior = "only",
+  prior   = priors_t2,
+  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+)
+```
+
+```{r}
+#prior checks
+pp_check(m_col1_prior, ndraws = 100)          
+hist(rowMeans(posterior_predict(m_col1_prior)))
+plot(m_col1_prior)                              
+```
+
+```{r}
+m_col1 <- brm(
+  dplagoal ~ plaavspeed_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col1,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+)
+```
+
+```{r}
+summary(m_col1)
+pp_check(m_col1, ndraws = 100)
+conditional_effects(m_col1, spaghetti = TRUE, ndraws = 200)
+plot(m_col1)
+```
+
+##Column 2
+```{r}
+m_col2 <- brm(
+  dplagoal ~ plaavspeed_c +
+    dhomegame +
+    rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col2,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+)
+
+```
+
+##Column 3
+```{r}
+m_col3 <- brm(
+  dplagoal ~
+    plaavspeed_c +
+    dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col3,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+)
+```
+
+##Column 4
+```{r}
+m_col4 <- brm(
+  dplagoal ~
+    plaavspeed_c +
+    dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_c +
+    team_crowd_c + opp_crowd_c +
+    p_odds_team_c + p_odds_draw_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col4,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+)
+```
+
+##Column 5
+```{r}
+m_col5 <- brm(
+  dplagoal ~
+    playersprints_c +
+    dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col356,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+)
+```
+
+##Column 6
+```{r}
+m_col6 <- brm(
+  dplagoal ~
+    plaavspeed_c + playersprints_c +
+    dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data    = data_col356,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+)
+```
+
+##Column 7:
+```{r}
+# Aggregation auf Spieler × Spiel
+data_col7 <- data_base %>%
+  group_by(player, gamenu) %>%
+  summarise(
+    # Ziel: hat der Spieler in diesem Spiel mindestens 1 Tor?
+    goal_game = as.integer(any(dplagoal == 1)),
+
+    # durchschnittliche Geschwindigkeit im Spiel
+    plaavspeed_game = first(plaavspeed_game),
+
+    # Controls, die auf Spiel-Ebene konstant sind
+    dhomegame = first(dhomegame),
+    rank_gap  = first(rank_gap),
+    .groups = "drop"
+  ) %>%
+  # fehlende Werte löschen
+  drop_na(goal_game, plaavspeed_game, dhomegame, rank_gap) %>%
+  # Zentrierung der Prädiktoren (wie bei den anderen Spalten)
+  mutate(
+    plaavspeed_game_c = plaavspeed_game - mean(plaavspeed_game, na.rm = TRUE),
+    rank_gap_c        = rank_gap - mean(rank_gap, na.rm = TRUE)
+  )
+```
+
+```{r}
+m_col7 <- brm(
+  formula = goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c +
+    (1 | player) + (1 | gamenu),    # Spieler- und Spiel-FE
+  data    = data_col7,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t2,
+  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+)
+
+```
+
+##Summary
+```{r}
+#für wenn alles passt 
+# Pakete
+library(purrr)
+library(tidyr)
+library(tibble)
+
+# Liste aller Modelle (Spalte 1–67
+models <- list(
+  col1 = m_col1,
+  col2 = m_col2,
+  col3 = m_col3,
+  col4 = m_col4,
+  col5 = m_col5,
+  col6 = m_col6,
+  col7 = m_col7
+)
+
+## 1) Fixed Effects wie in der Tabelle (Estimate, SD, 95%-CI) ---------
+
+fixed_summary <- imap_dfr(models, ~ {
+  fe <- as.data.frame(fixef(.x))
+  fe$term <- rownames(fe)
+  rownames(fe) <- NULL
+  
+  fe %>%
+    transmute(
+      model    = .y,
+      term,
+      estimate = Estimate,
+      se       = Est.Error,
+      l95      = Q2.5,
+      u95      = Q97.5
+    )
+})
+
+# fixed_summary ansehen:
+# View(fixed_summary)
+
+
+## 2) Random-Effects-SDs (player, gamenu, section, Residual falls vorhanden) ----
+
+rand_summary <- imap_dfr(models, ~ {
+  vc <- VarCorr(.x, summary = TRUE)
+  
+  # vc ist eine Liste pro Gruppierung
+  bind_rows(lapply(names(vc), function(grp) {
+    d <- as.data.frame(vc[[grp]])
+    d %>%
+      filter(var1 == "(Intercept)") %>%  # nur Interzept-SD
+      transmute(
+        model    = .y,
+        group    = grp,
+        sd_est   = sdcor,
+        sd_l95   = l_95,
+        sd_u95   = u_95
+      )
+  }))
+})
+
+# rand_summary ansehen:
+# View(rand_summary)
+
+
+## 3) Modell-Fit: R², LOO, WAIC, N -------------------------------
+
+# R² & N
+r2_summary <- imap_dfr(models, ~ {
+  r2s <- bayes_R2(.x)  # Matrix: draws x 1
+  tibble(
+    model  = .y,
+    R2_mean = mean(r2s),
+    R2_sd   = sd(r2s),
+    n_obs   = nobs(.x)
+  )
+})
+
+# LOO + WAIC
+loo_waic_summary <- imap_dfr(models, ~ {
+  l <- loo(.x)
+  w <- waic(.x)
+  
+  tibble(
+    model    = .y,
+    looic    = l$estimates["looic", "Estimate"],
+    looic_se = l$estimates["looic", "SE"],
+    waic     = w$estimates["waic", "Estimate"],
+    waic_se  = w$estimates["waic", "SE"]
+  )
+})
+
+# Alles zusammenführen:
+fit_summary <- r2_summary %>%
+  left_join(loo_waic_summary, by = "model")
+
+# fit_summary ansehen:
+# View(fit_summary)
+
+
+## 4) alles in einer Liste sammeln
+
+model_summaries <- list(
+  fixed_effects  = fixed_summary,
+  random_effects = rand_summary,
+  fit_measures   = fit_summary
+)
+
+# Beispiel:
+# View(model_summaries$fixed_effects)
+# View(model_summaries$random_effects)
+# View(model_summaries$fit_measures)
+```
 
