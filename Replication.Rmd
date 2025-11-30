@@ -10,6 +10,10 @@ library(haven)
 library(ggplot2)
 library(dplyr)
 library(plotly)
+library(tidyr)
+library(xtable)
+library(knitr)
+library(kableExtra)
 ```
 
 
@@ -189,6 +193,154 @@ data_base <- data %>%
     !(section %in% c(10, 20)) 
   )
 ```
+
+## Summary Statistics
+
+Define missing variable
+
+```{r}
+data_base <- data_base %>%
+  mutate(
+    SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
+                  dplagoal,                      # already 0/1 if player scored
+                  NA)                            # set others to NA
+  )
+```
+
+```{r}
+# unique combinations of team and games
+TG_combinations <- data_base %>%
+     distinct(team, gamenu) %>%
+     nrow()
+ 
+TG_combinations
+```
+```{r}
+team_game_redcards <- data_base %>%
+  group_by(team, gamenu) %>%
+  summarise(
+    redcard_teamgame = as.integer(any(dplaredc == 1)),
+    .groups = "drop"
+  )
+
+```
+
+
+
+
+
+```{r}
+### --------------------------------------------------------------
+### PANEL A: Section level
+### --------------------------------------------------------------
+
+panelA_vars <- list(
+  full_sections                = "dfullsection",
+#  overtime_sections            = "placeholder",      sind das nicht einfach static 0.1?
+  player_distance              = "playerdist",
+  player_sprints               = "playersprints",
+  goal_probability             = "SMGP",
+  team_distance                = "teamdist"
+)
+
+panelA <- data_base %>% 
+  summarise(
+    FullSections_mean     = mean(dfullsection, na.rm = TRUE),
+   # Overtime_mean         = mean(, na.rm = TRUE),
+    PlayerDistance_mean   = mean(playerdist, na.rm = TRUE),
+    PlayerDistance_sd     = sd(playerdist, na.rm = TRUE),
+    PlayerSprints_mean    = mean(playersprints, na.rm = TRUE),
+    PlayerSprints_sd      = sd(playersprints, na.rm = TRUE),
+    GoalProb_mean         = mean(SMGP, na.rm = TRUE),
+    GoalProb_sd           = sd(SMGP, na.rm = TRUE),
+    TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
+    TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
+    Observations_PS       = nrow(data_base),
+    Observations_TS       = TG_combinations*20         #18 oder 20?
+  )
+
+panelA <- panelA %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Value"
+  )
+  
+```
+
+
+
+
+```{r}
+### --------------------------------------------------------------
+### PANEL B: Game level
+### --------------------------------------------------------------
+
+panelB <- data_base %>% 
+  summarise(
+    SectionsPlayed_mean   = mean(player_sectionsplayed, na.rm = TRUE),
+    SectionsPlayed_sd     = sd(player_sectionsplayed, na.rm = TRUE),
+    AvgSpeed_mean         = mean(plaavspeed_game, na.rm = TRUE),
+    AvgSpeed_sd           = sd(plaavspeed_game, na.rm = TRUE),
+    TeamDistanceGame_mean = mean(teamdist_game, na.rm = TRUE),
+    TeamDistanceGame_sd   = sd(teamdist_game, na.rm = TRUE),
+    HomeCrowd_mean        = mean(team_crowd, na.rm = TRUE),
+    HomeCrowd_sd          = sd(team_crowd, na.rm = TRUE),
+    AwayCrowd_mean        = mean(opp_crowd, na.rm = TRUE),
+    AwayCrowd_sd          = sd(opp_crowd, na.rm = TRUE),
+    RedCardProb_mean      = mean(team_game_redcards$redcard_teamgame),
+    RedCardProb_sd        = sd(team_game_redcards$redcard_teamgame),
+    Obs_player_game       = Obs_player_game <- data_base %>%
+                            distinct(player, gamenu) %>%
+                            nrow(),
+    Obs_team_game         = n_distinct(team, gamenu),
+    Rounds                = n_distinct(played),
+    Games                 = n_distinct(gamenu),
+    Teams                 = n_distinct(team),
+    Players               = n_distinct(player),
+    Strikers              = data_base %>% filter(position == "4") %>% distinct(player) %>% nrow(),
+    Midfielders           = data_base %>% filter(position == "3") %>% distinct(player) %>% nrow(),
+    Defenders             = data_base %>% filter(position == "2") %>% distinct(player) %>% nrow()
+  )
+
+panelB <- panelB %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Variable",
+    values_to = "Value"
+  )
+```
+
+## Latex code for summary statistics
+```{r}
+### PANEL A Latex code
+panelA_latex <- kable(panelA, 
+                      format = "latex", 
+                      booktabs = TRUE, 
+                      caption = "Panel A: Section LeveL") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+
+# Print Latex code
+cat(panelA_latex)
+
+### PANEL B Latex code
+panelB_latex <- kable(panelB, 
+                      format = "latex", 
+                      booktabs = TRUE, 
+                      caption = "Panel B: Game Level") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+
+# Print Latex code
+cat(panelB_latex)
+```
+
+
+
+
+
+
+
+
 
 ```{r}
 data_col1 <- data_base %>%
