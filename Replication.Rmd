@@ -172,12 +172,13 @@ library(brms)
 ```
 
 ```{r}
-#set global weakly informative priors that fit (logit) scale
+#set global weakly informative priors that fit (logit) scale (gelten erstmal nur für m1)
 priors_t2 <- c(
-  set_prior("normal(-5, 1)",  class = "Intercept"),
-  set_prior("normal(0, 0.5)", class = "b"),
-  set_prior("exponential(2)", class = "sd")
+  set_prior("normal(-4.62, 1)", class = "Intercept"),        # an Beobachtung orientiert
+  set_prior("normal(0, 0.5)", class = "b", coef = "plaavspeed_c"), # Hauptprädiktor etwas informativ
+  set_prior("normal(0, 0.5)", class = "b")                   # breit(er) für alle anderen b
 )
+
 ```
 ##Prepare Data Sets
 ```{r}
@@ -264,7 +265,7 @@ data_col4 <- data_base %>%
 #check if n matches table
 nrow(data_col1)
 nrow(data_col2)
-nrow(data_col356) #hier sind 2 observations drin, die eig zu 4 sollen
+nrow(data_col356) #unterschieded sich um 2, müsste aber eig gleich sein
 nrow(data_col4)
 ```
 
@@ -272,12 +273,14 @@ nrow(data_col4)
 ```{r}
 m_col1_prior <- brm(
   dplagoal ~ plaavspeed_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col1,
   family  = bernoulli(link = "logit"),
   sample_prior = "only",
   prior   = priors_t2,
-  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+  iter    = 2000, warmup = 1000, chains = 4, cores = 4
 )
 ```
 
@@ -288,14 +291,17 @@ hist(rowMeans(posterior_predict(m_col1_prior)))
 plot(m_col1_prior)                              
 ```
 
+
 ```{r}
 m_col1 <- brm(
   dplagoal ~ plaavspeed_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section),     
   data    = data_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+  iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
 ```
 
@@ -313,11 +319,13 @@ m_col2 <- brm(
     dhomegame +
     rank_gap_c +
     player_cumsections_c + player_cumsections_2_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col2,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  iter    = 4000, warmup = 1500, chains = 4, cores = 4
+  iter    = 2000, warmup = 1000, chains = 4, cores = 4
 )
 
 ```
@@ -332,11 +340,13 @@ m_col3 <- brm(
     scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
     dteamred_pre + dteaminj_sec_pre +
     team_avespeed_pre_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col3,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
 ```
 
@@ -352,11 +362,13 @@ m_col4 <- brm(
     team_avespeed_pre_c +
     team_crowd_c + opp_crowd_c +
     p_odds_team_c + p_odds_draw_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col4,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
 ```
 
@@ -370,11 +382,13 @@ m_col5 <- brm(
     scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
     dteamred_pre + dteaminj_sec_pre +
     team_avespeed_pre_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col356,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
 ```
 
@@ -388,11 +402,13 @@ m_col6 <- brm(
     scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
     dteamred_pre + dteaminj_sec_pre +
     team_avespeed_pre_c +
-    (1 | player) + (1 | gamenu) + (1 | section),
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
   data    = data_col356,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
 ```
 
@@ -425,11 +441,12 @@ data_col7 <- data_base %>%
 ```{r}
 m_col7 <- brm(
   formula = goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c +
-    (1 | player) + (1 | gamenu),    # Spieler- und Spiel-FE
+    factor(player) +      
+    factor(gamenu), 
   data    = data_col7,
   family  = bernoulli(link = "logit"),
   prior   = priors_t2,
-  chains  = 4, iter = 4000, warmup = 1500, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
 
 ```
