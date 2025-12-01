@@ -199,7 +199,7 @@ data_base <- data %>%
 Define missing variable
 
 ```{r}
-data_base <- data_base %>%
+data <- data %>%
   mutate(
     SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
                   dplagoal,                      # already 0/1 if player scored
@@ -209,14 +209,14 @@ data_base <- data_base %>%
 
 ```{r}
 # unique combinations of team and games
-TG_combinations <- data_base %>%
+TG_combinations <- data %>%
      distinct(team, gamenu) %>%
      nrow()
  
 TG_combinations
 ```
 ```{r}
-team_game_redcards <- data_base %>%
+team_game_redcards <- data %>%
   group_by(team, gamenu) %>%
   summarise(
     redcard_teamgame = as.integer(any(dplaredc == 1)),
@@ -243,7 +243,7 @@ panelA_vars <- list(
   team_distance                = "teamdist"
 )
 
-panelA <- data_base %>% 
+panelA <- data %>% 
   summarise(
     FullSections_mean     = mean(dfullsection, na.rm = TRUE),
    # Overtime_mean         = mean(, na.rm = TRUE),
@@ -255,7 +255,7 @@ panelA <- data_base %>%
     GoalProb_sd           = sd(SMGP, na.rm = TRUE),
     TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
     TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
-    Observations_PS       = nrow(data_base),
+    Observations_PS       = nrow(data),
     Observations_TS       = TG_combinations*20         #18 oder 20?
   )
 
@@ -276,7 +276,7 @@ panelA <- panelA %>%
 ### PANEL B: Game level
 ### --------------------------------------------------------------
 
-panelB <- data_base %>% 
+panelB <- data %>% 
   summarise(
     SectionsPlayed_mean   = mean(player_sectionsplayed, na.rm = TRUE),
     SectionsPlayed_sd     = sd(player_sectionsplayed, na.rm = TRUE),
@@ -290,7 +290,7 @@ panelB <- data_base %>%
     AwayCrowd_sd          = sd(opp_crowd, na.rm = TRUE),
     RedCardProb_mean      = mean(team_game_redcards$redcard_teamgame),
     RedCardProb_sd        = sd(team_game_redcards$redcard_teamgame),
-    Obs_player_game       = Obs_player_game <- data_base %>%
+    Obs_player_game       = Obs_player_game <- data %>%
                             distinct(player, gamenu) %>%
                             nrow(),
     Obs_team_game         = n_distinct(team, gamenu),
@@ -298,9 +298,9 @@ panelB <- data_base %>%
     Games                 = n_distinct(gamenu),
     Teams                 = n_distinct(team),
     Players               = n_distinct(player),
-    Strikers              = data_base %>% filter(position == "4") %>% distinct(player) %>% nrow(),
-    Midfielders           = data_base %>% filter(position == "3") %>% distinct(player) %>% nrow(),
-    Defenders             = data_base %>% filter(position == "2") %>% distinct(player) %>% nrow()
+    Strikers              = data %>% filter(position == "4") %>% distinct(player) %>% nrow(),
+    Midfielders           = data %>% filter(position == "3") %>% distinct(player) %>% nrow(),
+    Defenders             = data %>% filter(position == "2") %>% distinct(player) %>% nrow()
   )
 
 panelB <- panelB %>%
