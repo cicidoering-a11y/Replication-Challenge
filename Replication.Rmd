@@ -652,7 +652,7 @@ m_col7 <- brm(
 
 
 
-# Hierachical
+# hierarchical logistic models
 ```{r}
 # Base priors
 priors_base <- c(
