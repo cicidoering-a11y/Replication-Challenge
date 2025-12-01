@@ -236,7 +236,7 @@ team_game_redcards <- data %>%
 
 panelA_vars <- list(
   full_sections                = "dfullsection",
-#  overtime_sections            = "placeholder",      sind das nicht einfach static 0.1?
+  overtime_sections            = "(data$section %in% c(10, 20)),2)",
   player_distance              = "playerdist",
   player_sprints               = "playersprints",
   goal_probability             = "SMGP",
@@ -246,7 +246,7 @@ panelA_vars <- list(
 panelA <- data %>% 
   summarise(
     FullSections_mean     = mean(dfullsection, na.rm = TRUE),
-   # Overtime_mean         = mean(, na.rm = TRUE),
+    Overtime_mean         = round(mean(data$section %in% c(10, 20)),2),
     PlayerDistance_mean   = mean(playerdist, na.rm = TRUE),
     PlayerDistance_sd     = sd(playerdist, na.rm = TRUE),
     PlayerSprints_mean    = mean(playersprints, na.rm = TRUE),
@@ -256,16 +256,17 @@ panelA <- data %>%
     TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
     TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
     Observations_PS       = nrow(data),
-    Observations_TS       = TG_combinations*20         #18 oder 20?
+    Observations_TS       = TG_combinations*20         
   )
 
+options(scipen = 999)
 panelA <- panelA %>%
   pivot_longer(
     cols = everything(),
     names_to = "Variable",
     values_to = "Value"
   )
-  
+ 
 ```
 
 
