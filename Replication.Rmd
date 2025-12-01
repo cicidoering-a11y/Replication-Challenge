@@ -363,6 +363,7 @@ data_col2 <- data_base %>%
     player_cumsections_c   = player_cumsections - mean(player_cumsections, na.rm = TRUE),
     player_cumsections_2_c = player_cumsections_2 - mean(player_cumsections_2, na.rm = TRUE)
   )
+
 ```
 
 ```{r}
@@ -432,15 +433,16 @@ m_col1_prior <- brm(
   family  = bernoulli(link = "logit"),
   sample_prior = "only",
   prior   = priors_t2,
-  iter    = 2000, warmup = 1000, chains = 4, cores = 4
+  iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
 ```
 
 ```{r}
 #prior checks
-pp_check(m_col1_prior, ndraws = 100)          
-hist(rowMeans(posterior_predict(m_col1_prior)))
-plot(m_col1_prior)                              
+pp_check(m_col1_prior, ndraws = 50)          
+yrep_small <- posterior_predict(m_col1_prior, ndraws = 100)
+hist(rowMeans(yrep_small))
+plot(m_col1_prior, N = 1000)                             
 ```
 
 
@@ -466,7 +468,25 @@ plot(m_col1)
 
 ##Column 2
 ```{r}
-m_col2 <- brm(
+priors_col2 <- c(
+  # baseline scoring probability ≈ 1%
+  set_prior("normal(-4.6, 0.5)", class = "Intercept"),
+  
+  # main covariates
+  set_prior("normal(0, 0.35)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.005)",class = "b", coef = "player_cumsections_2_c"),
+  
+  # default for everything else (all those factor dummies)
+  set_prior("normal(0, 0.8)", class = "b")
+)
+```
+
+
+```{r}
+m_col2_prior <- brm(
   dplagoal ~ plaavspeed_c +
     dhomegame +
     rank_gap_c +
@@ -474,14 +494,21 @@ m_col2 <- brm(
     factor(player) +      
     factor(gamenu) +     
     factor(section), 
+    sample_prior = "only",
   data    = data_col2,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_col2,
   iter    = 2000, warmup = 1000, chains = 4, cores = 4
 )
 
 ```
 
+```{r}
+#prior checks
+pp_check(m_col2_prior, ndraws = 100)          
+hist(rowMeans(posterior_predict(m_col2_prior)))
+plot(m_col2_prior)                              
+```
 ##Column 3
 ```{r}
 m_col3 <- brm(
