@@ -835,7 +835,6 @@ conditional_effects(m_col4_hier, spaghetti = TRUE, ndraws = 200)
 plot(m_col4_hier)
 ```
 
-
 ```{r}
 m_col5_hier <- brm(
   dplagoal ~
