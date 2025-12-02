@@ -657,7 +657,6 @@ m_col7 <- brm(
 # Base priors
 priors_base <- c(
   set_prior("normal(-4.6, 0.3)", class = "Intercept"),
-  set_prior("normal(0, 0.5)", class = "b"),
   set_prior("normal(0, 0.4)", class = "sd", group = "player", lb = 0),
   set_prior("normal(0, 0.4)", class = "sd", group = "gamenu", lb = 0),
   set_prior("normal(0, 0.4)", class = "sd", group = "section", lb = 0)
@@ -707,7 +706,6 @@ priors_col7 <- c(
   priors_base_col7,
   set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c")
 )
-
 ```
 
 ```{r}
@@ -725,6 +723,7 @@ m_col1_hier_prior <- brm(
   chains        = 4,
   cores         = 4
 )
+saveRDS(m_col1_hier_prior, "m_col1_hier_prior.rds")
 ```
 
 ```{r}
@@ -749,6 +748,7 @@ m_col1_hier <- brm(
   chains       = 4,
   cores        = 4
 )
+saveRDS(m_col1_hier, "m_col1_hier.rds")
 ```
 
 ```{r}
@@ -772,6 +772,7 @@ m_col2_hier <- brm(
   prior   = priors_col2,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col2_hier, "m_col2_hier.rds")
 ```
 
 ```{r}
@@ -798,6 +799,7 @@ m_col3_hier <- brm(
   prior   = priors_col3,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col3_hier, "m_col3_hier.rds")
 ```
 
 ```{r}
@@ -826,6 +828,7 @@ m_col4_hier <- brm(
   prior   = priors_col4,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col4_hier, "m_col4_hier.rds")
 ```
 
 ```{r}
@@ -852,6 +855,7 @@ m_col5_hier <- brm(
   prior   = priors_col5,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col5_hier, "m_col5_hier.rds")
 ```
 
 ```{r}
@@ -878,6 +882,7 @@ m_col6_hier <- brm(
   prior   = priors_col6,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col6_hier, "m_col6_hier.rds")
 ```
 
 ```{r}
@@ -898,6 +903,7 @@ m_col7_hier <- brm(
   prior   = priors_col7,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col7_hier, "m_col7_hier.rds")
 ```
 
 ```{r}
