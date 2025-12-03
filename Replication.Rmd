@@ -950,4 +950,116 @@ conditional_effects(m_col7_hier, spaghetti = TRUE, ndraws = 200)
 plot(m_col7_hier)
 ```
 
+```{r}
+options(mc.cores = 4)
 
+```
+
+
+```{r}
+library(brms)
+library(loo)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+
+## 1. Load all saved models -------------------------------------------
+m_list <- list(
+  `(1)` = readRDS("m_col1_hier.rds"),
+  `(2)` = readRDS("m_col2_hier.rds"),
+  `(3)` = readRDS("m_col3_hier.rds"),
+  `(4)` = readRDS("m_col4_hier.rds"),
+  `(5)` = readRDS("m_col5_hier.rds"),
+  `(6)` = readRDS("m_col6_hier.rds"),
+  `(7)` = readRDS("m_col7_hier.rds")
+)
+
+## 2. Helper to safely extract coefficient summaries -------------------
+
+get_coef_summary <- function(m, coef_name) {
+  fe <- fixef(m)
+  if (!coef_name %in% rownames(fe)) {
+    return(c(Estimate = NA, Est.Error = NA, Q2.5 = NA, Q97.5 = NA))
+  } else {
+    fe[coef_name, c("Estimate", "Est.Error", "Q2.5", "Q97.5")]
+  }
+}
+
+## 3. Build summary table ----------------------------------------------
+
+# we’ll assume these are the “effort” variables we care about
+# (speed in cols 1–4 & 6, sprints in 5 & 6, game-level speed in 7)
+model_summaries <- lapply(names(m_list), function(col_id) {
+  m <- m_list[[col_id]]
+  
+  # N (number of observations used)
+  N <- nobs(m)
+  
+  # main effort coefficients
+  beta_speed     <- get_coef_summary(m, "plaavspeed_c")
+  beta_sprints   <- get_coef_summary(m, "playersprints_c")
+  beta_speed_g   <- get_coef_summary(m, "plaavspeed_game_c")
+  
+  # Bayes R² (mean and 90% CI)
+  r2_draws <- bayes_R2(m)
+  r2_mean  <- mean(r2_draws)
+  r2_ci    <- quantile(r2_draws, probs = c(0.05, 0.95))
+  
+  # LOO & WAIC
+  loo_out  <- loo(m)
+  waic_out <- waic(m)
+  
+  looic  <- loo_out$estimates["looic", "Estimate"]
+  waic   <- waic_out$estimates["waic", "Estimate"]
+  
+  tibble(
+    Column = col_id,
+    N      = N,
+    
+    # speed (section level)
+    beta_speed      = beta_speed["Estimate"],
+    se_speed        = beta_speed["Est.Error"],
+    l95_speed       = beta_speed["Q2.5"],
+    u95_speed       = beta_speed["Q97.5"],
+    
+    # sprints
+    beta_sprints    = beta_sprints["Estimate"],
+    se_sprints      = beta_sprints["Est.Error"],
+    l95_sprints     = beta_sprints["Q2.5"],
+    u95_sprints     = beta_sprints["Q97.5"],
+    
+    # game-level speed (col 7)
+    beta_speed_game = beta_speed_g["Estimate"],
+    se_speed_game   = beta_speed_g["Est.Error"],
+    l95_speed_game  = beta_speed_g["Q2.5"],
+    u95_speed_game  = beta_speed_g["Q97.5"],
+    
+    # Bayes R²
+    R2_mean = r2_mean,
+    R2_l90  = r2_ci[1],
+    R2_u90  = r2_ci[2],
+    
+    # Fit criteria
+    LOOIC = looic,
+    WAIC  = waic
+  )
+})
+
+table2_summary <- bind_rows(model_summaries)
+
+## 4. Nicely formatted table (like Table 2 + extra stats) --------------
+
+table2_summary %>%
+  mutate(
+    # optional: round for display
+    across(
+      c(beta_speed:WAIC),
+      ~ round(., 3)
+    )
+  ) %>%
+  kable(
+    format = "latex", booktabs = TRUE,
+    caption = "Bayesian hierarchical models corresponding to Table 2 (coefficients for effort variables, Bayes R², LOOIC, WAIC)."
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+```
