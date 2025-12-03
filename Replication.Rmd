@@ -416,11 +416,47 @@ data_col4 <- data_base %>%
 ```
 
 ```{r}
+# player × game data for column 7 (as in the paper)
+data_col7 <- data %>%
+  # same sample restrictions as Table 2
+  filter(
+    position %in% c(3, 4),         # only midfielders and strikers
+    !(section %in% c(10, 20))      # drop overtime sections
+  ) %>%
+  group_by(player, gamenu) %>%
+  summarise(
+    # outcome: at least one goal by this player in this game
+    goal_game        = as.integer(any(dplagoal == 1)),
+
+    # main regressor: game-average speed of the player
+    plaavspeed_game  = first(plaavspeed_game),
+
+    # controls that are constant within a game for that player
+    dhomegame        = first(dhomegame),
+    rank_gap         = first(rank_gap),
+
+    .groups = "drop"
+  ) %>%
+  # drop missing info (e.g. if some game-level variable is NA)
+  drop_na(goal_game, plaavspeed_game, dhomegame, rank_gap) %>%
+  # centering (like in the other columns)
+  mutate(
+    plaavspeed_game_c = plaavspeed_game - mean(plaavspeed_game, na.rm = TRUE),
+    rank_gap_c        = rank_gap - mean(rank_gap, na.rm = TRUE),
+    # factors for player and game fixed/random effects
+    player            = factor(player),
+    gamenu            = factor(gamenu)
+  )
+
+```
+
+```{r}
 #check if n matches table
 nrow(data_col1)
 nrow(data_col2)
 nrow(data_col356) #unterschieded sich um 2, müsste aber eig gleich sein
 nrow(data_col4)
+nrow(data_col7) #hier fehlen 14, verstehe nicht warum
 ```
 
 ##Column 1
