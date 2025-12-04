@@ -14,6 +14,8 @@ library(tidyr)
 library(xtable)
 library(knitr)
 library(kableExtra)
+library(tidybayes)
+
 ```
 
 
@@ -375,6 +377,26 @@ cat(panelB_latex)
 
 
 
+
+##Intercept-only model
+```{r}
+m_intercept <- brm(
+  dplagoal ~ 1, 
+  data    = data_base,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior = prior( normal(0, 3.5), class = Intercept),      
+  iter    = 2000, warmup = 1000, chains = 4, cores = 4
+)
+
+pp_check(m_intercept)
+summary(m_intercept)
+
+
+posterior_samples( m_intercept ) %>% 
+  transmute( alpha = inv_logit_scaled( b_Intercept )) %>% 
+  mean_qi()
+```
 
 
 
