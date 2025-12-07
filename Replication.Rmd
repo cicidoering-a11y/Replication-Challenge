@@ -33,6 +33,21 @@ data$bdate <- as.Date(data$bdate, format = "%Y-%m-%d")
 data$joineddate <- as.Date(data$joineddate, format = "%Y-%m-%d")
 ```
 
+```{r}
+summary(data)
+```
+
+```{r}
+data %>%
+  keep(is.numeric) %>%                     # Keep only numeric columns
+  gather() %>%                             # Convert to key-value pairs
+  ggplot(aes(value)) +                     # Plot the values
+    facet_wrap(~ key, scales = "free") +   # In separate panels
+    geom_histogram() 
+```
+
+
+
 ## Add Team Names for table 3
 ```{r}
 # add team names to the data for table 3
