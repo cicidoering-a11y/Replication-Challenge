@@ -33,17 +33,45 @@ data$bdate <- as.Date(data$bdate, format = "%Y-%m-%d")
 data$joineddate <- as.Date(data$joineddate, format = "%Y-%m-%d")
 ```
 
+## Add Team Names for table 3
+```{r}
+# add team names to the data for table 3
+library(readxl)
+team_names <- read_excel("TeamID.xlsx")
 
-```{r}
-summary(data)
-```
-```{r}
-data %>%
-  keep(is.numeric) %>%                     # Keep only numeric columns
-  gather() %>%                             # Convert to key-value pairs
-  ggplot(aes(value)) +                     # Plot the values
-    facet_wrap(~ key, scales = "free") +   # In separate panels
-    geom_histogram() 
+
+#teams don't play the same amount of games, there are 26 games in the first round then they are divided in top teams and bottom teams. isolate the 26 first games (Appendix A.2, in the paper) the first season
+
+
+
+# team rank in game 26 and game 27 because rank variable is the rank before the game
+
+team_rank_r26 <- data %>%
+  filter(played == 26) %>%           # only round 26
+  distinct(team, team_rank)          # one row per team with its rank
+
+team_rank_r27 <- data %>%
+  filter(played == 27) %>%           # only round 26
+  distinct(team, team_rank)          # one row per team with its rank
+
+# compared with table "Positions by round" from https://en.wikipedia.org/wiki/2017%E2%80%9318_Israeli_Premier_League#Regular_season_table  -> team_rank_r27 is the right one
+
+# add the israeli name to round 27
+team_rank_r27 <- team_rank_r27 %>%
+  left_join(
+    team_names %>%
+      select(team_rank, israeli_name = `händisch israeli name`),
+    by = "team_rank"
+  )
+
+#add the israeli name to main data
+data <- data %>%
+  left_join(
+    team_rank_r27 %>%
+      select(team, israeli_name),
+    by = "team"
+  )
+
 ```
 
 
