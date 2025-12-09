@@ -15,6 +15,9 @@ library(xtable)
 library(knitr)
 library(kableExtra)
 library(tidybayes)
+library(brms)
+library(bayesplot)
+library(posterior)
 
 ```
 
@@ -1165,4 +1168,153 @@ table2_summary %>%
     caption = "Bayesian hierarchical models corresponding to Table 2 (coefficients for effort variables, Bayes R², LOOIC, WAIC)."
   ) %>%
   kable_styling(latex_options = c("hold_position", "scale_down"))
+```
+
+
+# Table 3
+
+```{r}
+##### First, aggregate on the team x game level #####
+
+data_teamxgame <- data %>% 
+  group_by(gamenu, team) %>%  
+  summarise(
+    teamdist_game = sum(teamdist_game, na.rm = TRUE),
+    oppdist_game  = sum(oppdist_game,  na.rm = TRUE),
+    dteamwin      = unique(dteamwin),     # same for all players on team
+    team_crowd        = unique(team_crowd),
+    opp_crowd         = unique(opp_crowd),
+    rank_gap          = unique(rank_gap),
+    dhomegame         = unique(dhomegame),
+    danyteamredc_game = unique(danyteamredc_game),
+    israeli_name      = unique(israeli_name),
+    played            = unique(played)
+  ) %>% 
+  ungroup() %>%
+  mutate(
+    distance_ratio = teamdist_game / oppdist_game,
+    total_distance = teamdist_game + oppdist_game
+  ) %>%
+  group_by(gamenu) %>%
+  slice_min(israeli_name) %>%      # keep only the team which comes first in the hebrew alpahbet
+  ungroup()
+```
+
+```{r}
+# ---------- Create derived variables and center continuous regressors ----------
+data_teamxgame <- data_teamxgame %>%
+  mutate(
+    distance_ratio = ifelse(is.na(distance_ratio), teamdist_game / ifelse(oppdist_game==0, NA, opp_dist),     distance_ratio),
+    total_distance   = teamdist_game + oppdist_game,
+    # center continuous predictors (mean-centering)
+    teamdist_c = teamdist_game - mean(teamdist_game, na.rm = TRUE),
+    oppdist_c  = oppdist_game  - mean(oppdist_game,  na.rm = TRUE),
+    distance_ratio_c  = distance_ratio - mean(distance_ratio, na.rm = TRUE),
+    total_distance_c  = total_distance - mean(total_distance, na.rm = TRUE),
+    rank_gap_c   = rank_gap - mean(rank_gap, na.rm = TRUE),
+    team_crowd_c = team_crowd - mean(team_crowd, na.rm = TRUE),
+    opp_crowd_c  = opp_crowd - mean(opp_crowd, na.rm = TRUE)
+  )
+
+#datasets for each column 
+table3_col1 <- data_teamxgame %>%
+  drop_na(dteamwin, teamdist_game, oppdist_game)  
+
+table3_col2 <- data_teamxgame %>%
+  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap)
+
+table3_col3 <- data_teamxgame %>%
+  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap, team_crowd)
+
+table3_col4 <- data_teamxgame %>%
+  # restrict to games without red cards
+  filter(is.na(danyteamredc_game) | danyteamredc_game == 0) %>%
+  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap)
+
+table3_col5 <- data_teamxgame %>%
+  drop_na(dteamwin, distance_ratio, dhomegame, rank_gap)
+
+table3_col6 <- data_teamxgame %>%
+  drop_na(dteamwin, distance_ratio, total_distance, dhomegame, rank_gap)
+
+# double-check sample sizes
+sapply(list(table3_col1, table3_col2, table3_col3, table3_col4, table3_col5, table3_col6), nrow)
+```
+
+slightly different sample sizes compared to the ones from table 3 in the paper (why?)
+
+```{r}
+#set weakly informative priors that fit logit scale 
+priors_t3 <- c( 
+set_prior("normal(0, 1)", class = "Intercept"), # 50% baseline chance angenommen, 95% masse in ca. [0.12, 0.88] 
+set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
+set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+set_prior("normal(0, 1)"))
+```
+
+
+```{r}
+m_t3col1_prior <- brm( 
+dteamwin ~ teamdist_c + oppdist_c + factor(played),
+data = table3_col1, 
+family = bernoulli(link = "logit"),
+sample_prior = "only",
+prior = priors_t3,
+iter = 1000, warmup = 500, chains = 4, cores = 4 
+)
+```
+
+```{r}
+#prior checks
+pp_check(m_t3col1_prior, ndraws = 50)          
+yrep_small <- posterior_predict(m_t3col1_prior, ndraws = 100)
+hist(rowMeans(yrep_small))
+plot(m_t3col1_prior, N = 1000)                             
+```
+
+```{r}
+m_t3col1 <- brm(
+  dteamwin ~ teamdist_c + oppdist_c + factor(played),     
+  data    = table3_col1,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4
+)
+```
+
+```{r}
+summary(m_t3col1)
+pp_check(m_t3col1, ndraws = 100)
+conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
+plot(m_t3col1)
+```
+
+```{r}
+cor(table3_col1 %>% select(teamdist_c, oppdist_c, distance_ratio_c, total_distance_c), use = "pairwise.complete.obs")
+```
+
+is multicollinearity causing problems here?
+
+lets test for col 5
+```{r}
+priors_t3c5 <-c(
+set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
+set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
+)
+```
+
+
+```{r}
+m_t3col5 <- brm(
+  dteamwin ~ distance_ratio_c + 
+  dhomegame +
+  rank_gap_c +
+  factor(played),     
+  data    = table3_col1,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3c5,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4,
+  control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
+)
 ```
