@@ -21,6 +21,9 @@ library(posterior)
 
 ```
 
+```{r}
+mean(is.na(data$opp_crowd)) * 100
+```
 
 
 ```{r}
@@ -223,14 +226,7 @@ library(tidyr)
 library(brms)
 ```
 
-```{r}
-#set global weakly informative priors that fit (logit) scale (gelten erstmal nur für m1)
-priors_t2 <- c(
-  set_prior("normal(-4.62, 1)", class = "Intercept"),        # an Beobachtung orientiert
-  set_prior("normal(0, 0.5)", class = "b", coef = "plaavspeed_c"), # Hauptprädiktor etwas informativ
-  set_prior("normal(0, 0.5)", class = "b")                   # breit(er) für alle anderen b
-)
-```
+
 ##Prepare Data Sets
 ```{r}
 data_base <- data %>%
@@ -564,6 +560,67 @@ nrow(data_col356) #unterschieded sich um 2, müsste aber eig gleich sein
 nrow(data_col4)
 nrow(data_col7) #hier fehlen 14, verstehe nicht warum
 ```
+```{r}
+# Base priors for all fixed-effects specifications
+priors_fixef_base <- c(
+  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
+  set_prior("normal(0, 0.8)", class = "b")
+)
+
+### Column 1
+priors_fixef_col1 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
+)
+
+### Column 2
+priors_fixef_col2 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)",  class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.005)",class = "b", coef = "player_cumsections_2_c")
+)
+
+### Column 3
+priors_fixef_col3 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
+)
+
+### Column 4
+priors_fixef_col4 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_draw_c")
+)
+
+### Column 5
+priors_fixef_col5 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c")
+)
+
+### Column 6
+priors_fixef_col6 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c")
+)
+
+### Column 7
+priors_fixef_col7 <- c(
+  set_prior("normal(-4.6, 1)", class = "Intercept"),   # more variation at game level
+  set_prior("normal(0, 0.8)", class = "b"),           # all dummy/FE coefficients
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c")
+)
+
+```
+
 
 ##Column 1
 ```{r}
@@ -575,9 +632,14 @@ m_col1_prior <- brm(
   data    = data_col1,
   family  = bernoulli(link = "logit"),
   sample_prior = "only",
-  prior   = priors_t2,
+  prior   = priors_fixef_col1,
   iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
+saveRDS(m_col1_prior, "m_col1_prior.rds")
+```
+
+```{r}
+saveRDS(m_col1_prior, "m_col1_prior.rds")
 ```
 
 ```{r}
@@ -588,7 +650,6 @@ hist(rowMeans(yrep_small))
 plot(m_col1_prior, N = 1000)                             
 ```
 
-
 ```{r}
 m_col1 <- brm(
   dplagoal ~ plaavspeed_c +
@@ -597,9 +658,10 @@ m_col1 <- brm(
     factor(section),     
   data    = data_col1,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col1,
   iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
+saveRDS(m_col1, "m_col1.rds")
 ```
 
 ```{r}
@@ -610,23 +672,6 @@ plot(m_col1)
 ```
 
 ##Column 2
-```{r}
-priors_col2 <- c(
-  # baseline scoring probability ≈ 1%
-  set_prior("normal(-4.6, 0.5)", class = "Intercept"),
-  
-  # main covariates
-  set_prior("normal(0, 0.35)", class = "b", coef = "plaavspeed_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
-  set_prior("normal(0, 0.005)",class = "b", coef = "player_cumsections_2_c"),
-  
-  # default for everything else (all those factor dummies)
-  set_prior("normal(0, 0.8)", class = "b")
-)
-```
-
 
 ```{r}
 m_col2_prior <- brm(
@@ -640,10 +685,10 @@ m_col2_prior <- brm(
     sample_prior = "only",
   data    = data_col2,
   family  = bernoulli(link = "logit"),
-  prior   = priors_col2,
+  prior   = priors_fixef_col2,
   iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
-
+saveRDS(m_col2_prior, "m_col2_prior.rds")
 ```
 
 ```{r}
@@ -666,10 +711,10 @@ m_col2 <- brm(
     #sample_prior = "only",
   data    = data_col2,
   family  = bernoulli(link = "logit"),
-  prior   = priors_col2,
+  prior   = priors_fixef_col2,
   iter    = 2000, warmup = 1000, chains = 4, cores = 4
 )
-
+saveRDS(m_col2, "m_col2.rds")
 ```
 
 ##Column 3
@@ -687,9 +732,10 @@ m_col3 <- brm(
     factor(section), 
   data    = data_col3,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col3,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col3, "m_col3.rds")
 ```
 
 ##Column 4
@@ -709,9 +755,10 @@ m_col4 <- brm(
     factor(section), 
   data    = data_col4,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col4,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col4, "m_col4.rds")
 ```
 
 ##Column 5
@@ -729,9 +776,10 @@ m_col5 <- brm(
     factor(section), 
   data    = data_col356,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col5,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col5, "m_col5.rds")
 ```
 
 ##Column 6
@@ -749,9 +797,10 @@ m_col6 <- brm(
     factor(section), 
   data    = data_col356,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col6,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
+saveRDS(m_col6, "m_col6.rds")
 ```
 
 ##Column 7:
@@ -787,10 +836,10 @@ m_col7 <- brm(
     factor(gamenu), 
   data    = data_col7,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t2,
+  prior   = priors_fixef_col7,
   chains  = 4, iter = 2000, warmup = 1000, cores = 4
 )
-
+saveRDS(m_col7, "m_col7.rds")
 ```
 
 
@@ -1056,10 +1105,8 @@ conditional_effects(m_col7_hier, spaghetti = TRUE, ndraws = 200)
 plot(m_col7_hier)
 ```
 
-```{r}
-options(mc.cores = 4)
 
-```
+
 
 
 ```{r}
@@ -1318,3 +1365,7 @@ m_t3col5 <- brm(
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
+
+
+
+
