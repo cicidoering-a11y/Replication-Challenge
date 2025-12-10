@@ -261,6 +261,7 @@ TG_combinations <- data_base %>%
  
 TG_combinations
 ```
+
 ```{r}
 team_game_redcards <- data_base %>%
   group_by(team, gamenu) %>%
@@ -560,63 +561,113 @@ nrow(data_col356) #unterschieded sich um 2, müsste aber eig gleich sein
 nrow(data_col4)
 nrow(data_col7) #hier fehlen 14, verstehe nicht warum
 ```
+
 ```{r}
-# Base priors for all fixed-effects specifications
+## Fixed-effects priors (for models with factor(player), factor(gamenu), factor(section))
+## Designed to be as close as possible in scale to the hierarchical setup.
+
+## 1) Base priors: used for columns 1–6
 priors_fixef_base <- c(
+  # same intercept prior as hierarchical cols 1–6
   set_prior("normal(-4.6, 0.3)", class = "Intercept"),
-  set_prior("normal(0, 0.8)", class = "b")
+  # default for all coefficients (incl. factor dummies), unless overridden below
+  set_prior("normal(0, 0.4)",   class = "b")
 )
 
-### Column 1
+## 2) Column-specific priors: base + explicit priors for every covariate in that column
+
+### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
 priors_fixef_col1 <- c(
   priors_fixef_base,
   set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
 )
 
-### Column 2
+### Column 2: add dhomegame, rank_gap_c, player_cumsections_c, player_cumsections_2_c
 priors_fixef_col2 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.4)",  class = "b", coef = "plaavspeed_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
-  set_prior("normal(0, 0.005)",class = "b", coef = "player_cumsections_2_c")
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c")
 )
 
-### Column 3
+### Column 3: add pre-match / lagged controls
+### dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c + player_cumsections_c + player_cumsections_2_c +
+###             scoregap_pre_c + dteamgoal_pre + dplagoal_pre + dteamred_pre + dteaminj_sec_pre +
+###             team_avespeed_pre_c + factors
 priors_fixef_col3 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
 )
 
-### Column 4
+### Column 4: plus crowd & betting odds
+### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
 priors_fixef_col4 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  priors_fixef_col3,  # all priors from col3 +
   set_prior("normal(0, 0.4)", class = "b", coef = "team_crowd_c"),
   set_prior("normal(0, 0.4)", class = "b", coef = "opp_crowd_c"),
   set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_team_c"),
   set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_draw_c")
 )
 
-### Column 5
+### Column 5: sprint effort instead of plaavspeed_c
+### dplagoal ~ playersprints_c + same controls as col3 + factors
 priors_fixef_col5 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c")
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
 )
 
-### Column 6
+### Column 6: both plaavspeed_c and playersprints_c + same controls as col5
 priors_fixef_col6 <- c(
   priors_fixef_base,
   set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c")
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
 )
 
-### Column 7
+## 3) Column 7: game-level model, wider priors like hierarchical priors_base_col7
+
+priors_fixef_base_col7 <- c(
+  set_prior("normal(-4.6, 1)", class = "Intercept"),  # more variation at game level
+  set_prior("normal(0, 0.5)", class = "b")           # all coefficients by default
+)
+
+### Column 7: goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c + factor(player) + factor(gamenu)
 priors_fixef_col7 <- c(
-  set_prior("normal(-4.6, 1)", class = "Intercept"),   # more variation at game level
-  set_prior("normal(0, 0.8)", class = "b"),           # all dummy/FE coefficients
-  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c")
+  priors_fixef_base_col7,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "rank_gap_c")
 )
 
 ```
@@ -638,9 +689,6 @@ m_col1_prior <- brm(
 saveRDS(m_col1_prior, "m_col1_prior.rds")
 ```
 
-```{r}
-saveRDS(m_col1_prior, "m_col1_prior.rds")
-```
 
 ```{r}
 #prior checks
@@ -651,6 +699,7 @@ plot(m_col1_prior, N = 1000)
 ```
 
 ```{r}
+## POSTERIOR MODEL + LOO/WAIC
 m_col1 <- brm(
   dplagoal ~ plaavspeed_c +
     factor(player) +      
@@ -659,8 +708,14 @@ m_col1 <- brm(
   data    = data_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col1,
-  iter    = 1000, warmup = 500, chains = 4, cores = 4
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
+
+## add LOO & WAIC to the fit object
+m_col1 <- add_criterion(m_col1, c("loo", "waic"))
+
+## save model *with* criteria
 saveRDS(m_col1, "m_col1.rds")
 ```
 
@@ -712,8 +767,13 @@ m_col2 <- brm(
   data    = data_col2,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col2,
-  iter    = 2000, warmup = 1000, chains = 4, cores = 4
+  iter    = 2000, warmup = 1000, chains = 4, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
+
+## add LOO & WAIC to the fit object
+m_col2 <- add_criterion(m_col2, c("loo", "waic"))
+
 saveRDS(m_col2, "m_col2.rds")
 ```
 
@@ -730,12 +790,15 @@ m_col3 <- brm(
     factor(player) +      
     factor(gamenu) +     
     factor(section), 
-  data    = data_col3,
+  data    = data_col356,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col3,
-  chains  = 4, iter = 2000, warmup = 1000, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
-saveRDS(m_col3, "m_col3.rds")
+
+## add LOO & WAIC to the fit object
+m_col3 <- add_criterion(m_col3, c("loo", "waic"))
 ```
 
 ##Column 4
@@ -756,8 +819,12 @@ m_col4 <- brm(
   data    = data_col4,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col4,
-  chains  = 4, iter = 2000, warmup = 1000, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
+
+## add LOO & WAIC to the fit object
+m_col4 <- add_criterion(m_col4, c("loo", "waic"))
 saveRDS(m_col4, "m_col4.rds")
 ```
 
@@ -777,9 +844,12 @@ m_col5 <- brm(
   data    = data_col356,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col5,
-  chains  = 4, iter = 2000, warmup = 1000, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
-saveRDS(m_col5, "m_col5.rds")
+
+## add LOO & WAIC to the fit object
+m_col5 <- add_criterion(m_col5, c("loo", "waic"))
 ```
 
 ##Column 6
