@@ -809,6 +809,7 @@ m_col5 <- brm(
 
 ## add LOO & WAIC to the fit object
 m_col5 <- add_criterion(m_col5, c("loo", "waic"))
+saveRDS(m_col5, "m_col5.rds")
 ```
 
 ##Column 6
@@ -827,8 +828,12 @@ m_col6 <- brm(
   data    = data_col356,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col6,
-  chains  = 4, iter = 2000, warmup = 1000, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
+
+## add LOO & WAIC to the fit object
+m_col6 <- add_criterion(m_col6, c("loo", "waic"))
 saveRDS(m_col6, "m_col6.rds")
 ```
 
@@ -866,8 +871,12 @@ m_col7 <- brm(
   data    = data_col7,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col7,
-  chains  = 4, iter = 2000, warmup = 1000, cores = 4
+  chains  = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
 )
+
+## add LOO & WAIC to the fit object
+m_col7 <- add_criterion(m_col7, c("loo", "waic"))
 saveRDS(m_col7, "m_col7.rds")
 ```
 
