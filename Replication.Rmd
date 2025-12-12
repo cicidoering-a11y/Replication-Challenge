@@ -760,6 +760,11 @@ m_col3 <- brm(
 m_col3 <- add_criterion(m_col3, c("loo", "waic"))
 ```
 
+```{r}
+
+saveRDS(m_col3, "m_col3.rds")
+```
+
 ##Column 4
 ```{r}
 m_col4 <- brm(
