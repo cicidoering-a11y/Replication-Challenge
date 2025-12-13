@@ -206,6 +206,33 @@ etable(reg1, reg2, reg3, reg4)
 
 ```
 
+```{r}
+data %>%
+  ggplot(aes(x=playersprints, y=plaavspeed)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_classic()
+
+data %>%
+  ggplot(aes(x=teamdist_game, y = oppdist_game)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +
+  theme_classic()
+
+
+data %>%
+  ggplot(aes(x=dplagoal)) +
+  geom_histogram() +
+  theme_classic()
+
+
+data %>%
+  ggplot(aes(x=dteamwin)) +
+  geom_histogram() +
+  theme_classic()
+```
+
+
 
 
 ## Summary Statistics
