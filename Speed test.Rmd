@@ -153,10 +153,13 @@ set.seed(123)
 
 time_rstan <- system.time({
   m_col1_prior_rstan <- brm(
-    dplagoal ~ plaavspeed_c,
+    dplagoal ~ plaavspeed_c +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section),
     data    = data_col1,
     family  = bernoulli(link = "logit"),
-    sample_prior = "only",
+    #sample_prior = "only",
     prior   = priors_fixef_col1,
     iter    = 1000, warmup = 500,
     chains  = brms_chains, cores = brms_cores,
@@ -177,16 +180,22 @@ time_rstan
 library(cmdstanr)
 set.seed(123)
 
-#set threads
+# no mulitthreading
+# threads_per_chain <- 1
+
+#set threads for multithreading
 Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
 
 
 time_cmdstan <- system.time({
   m_col1_prior_cmdstan <- brm(
-    dplagoal ~ plaavspeed_c,
+    dplagoal ~ plaavspeed_c +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section),
     data    = data_col1,
     family  = bernoulli(link = "logit"),
-    sample_prior = "only",
+    #sample_prior = "only",
     prior   = priors_fixef_col1,
     iter    = 1000, warmup = 500,
     chains  = brms_chains, cores = brms_cores,
@@ -206,3 +215,16 @@ rbind(
   cmdstanr = time_cmdstan
 )
 ```
+
+
+Lection:
+There are two components that determine runtime. The first is compilation, which translates the model specification(formula and distribution types) into machine-executable code. The second is sampling, during which the MCMC algorithm explores the posterior distribution. 
+Once a model is compiled, changes to the data or prior hyperparameters do not require recompilation and only affect sampling time. 
+CmdStan typically incurs higher one-time compilation costs but achieves faster sampling. In contrast, rstan usually compiles more quickly but has slower sampling performance. 
+-> For models with many predictors or complex structures, sampling time dominates total runtime, making CmdStan the preferred backend.
+
+Within-chain threading introduces overhead and is only beneficial once the per-iteration computational cost of the model is sufficiently large, which is typically the case for complex or high-dimensional models.
+-> For models with many predictors or complex structures, multithreading makes sense.
+
+Idea: compile once with tiny model and sample then with more iterations and stuff?
+
