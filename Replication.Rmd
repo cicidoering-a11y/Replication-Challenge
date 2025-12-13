@@ -1358,7 +1358,7 @@ data <- data %>%
 ##### First, aggregate on the team x game level #####
 
 data_teamxgame <- data %>% 
-  group_by(gamenu, team) %>%  
+  group_by(gamenu, team, opponent) %>%  # we keep opponent to include pair fixed effects
   summarise(
     teamdist_game = sum(teamdist_game, na.rm = TRUE),
     oppdist_game  = sum(oppdist_game,  na.rm = TRUE),
@@ -1369,17 +1369,34 @@ data_teamxgame <- data %>%
     dhomegame         = unique(dhomegame),
     danyteamredc_game = unique(danyteamredc_game),
     israeli_name      = unique(israeli_name),
-    played            = unique(played)
+    played            = unique(played),
+    .groups = "drop"
   ) %>% 
-  ungroup() %>%
   mutate(
     distance_ratio = teamdist_game / oppdist_game,
-    total_distance = teamdist_game + oppdist_game
+    total_distance = teamdist_game + oppdist_game,
+    # create pair fixed effects before dropping one team per game
+    team_low  = pmin(team, opponent),
+    team_high = pmax(team, opponent),
+    pair      =paste(team_low, team_high, sep = "_")
   ) %>%
   group_by(gamenu) %>%
   slice_min(israeli_name) %>%      # keep only the team which comes first in the hebrew alpahbet
   ungroup()
 ```
+
+pair fixed effects
+```{r}
+data_teamxgame <- data_teamxgame %>%
+  mutate(
+    team_low  = pmin(team, opponent),
+    team_high = pmax(team, opponent),
+    pair = paste0(team_low, "_", team_high)
+  )
+#we have 14 teams, 14 over 2 = 91 possible matchups,verify below
+length(unique(data_teamxgame$pair))
+```
+
 
 ```{r}
 # ---------- Create derived variables and center continuous regressors ----------
@@ -1436,7 +1453,7 @@ set_prior("normal(0, 1)"))
 
 ```{r}
 m_t3col1_prior <- brm( 
-dteamwin ~ teamdist_c + oppdist_c + factor(played),
+dteamwin ~ teamdist_c + oppdist_c + factor(played) + factor(pair),
 data = table3_col1, 
 family = bernoulli(link = "logit"),
 sample_prior = "only",
@@ -1455,7 +1472,7 @@ plot(m_t3col1_prior, N = 1000)
 
 ```{r}
 m_t3col1 <- brm(
-  dteamwin ~ teamdist_c + oppdist_c + factor(played),     
+  dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played),
   data    = table3_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_t3,
@@ -1466,7 +1483,7 @@ m_t3col1 <- brm(
 ```{r}
 summary(m_t3col1)
 pp_check(m_t3col1, ndraws = 100)
-conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
+#conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
 plot(m_t3col1)
 ```
 
