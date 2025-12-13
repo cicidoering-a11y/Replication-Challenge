@@ -1,0 +1,208 @@
+---
+title: "Speed test"
+author: "Lourenco Debonnet"
+date: "2025-12-13"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(haven)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(tidyr)
+library(xtable)
+library(knitr)
+library(kableExtra)
+library(tidybayes)
+library(brms)
+library(bayesplot)
+library(posterior)
+```
+
+
+```{r}
+data <- read_dta("original&computed_DB_forrep.dta")
+```
+
+```{r}
+data_base <- data %>%
+  filter(
+    dfullsection == 1,          # full sections only
+    position %in% c(3, 4),      # midfielders + strikers
+    !(section %in% c(10, 20)) 
+  )
+data_base <- data_base  %>% mutate(player = factor(player),
+                                    gamenu = factor(gamenu),
+                                    section = factor(section))
+```
+
+```{r}
+data_col1 <- data_base %>%
+  drop_na(dplagoal, plaavspeed) %>%
+  mutate(
+    plaavspeed_c = plaavspeed - mean(plaavspeed, na.rm = TRUE)
+  )
+```
+
+
+# Priors
+```{r}
+## Fixed-effects priors (for models with factor(player), factor(gamenu), factor(section))
+## Designed to be as close as possible in scale to the hierarchical setup.
+
+## 1) Base priors: used for columns 1–6
+priors_fixef_base <- c(
+  # same intercept prior as hierarchical cols 1–6
+  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
+  # default for all coefficients (incl. factor dummies), unless overridden below
+  set_prior("normal(0, 0.4)",   class = "b")
+)
+
+## 2) Column-specific priors: base + explicit priors for every covariate in that column
+
+### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
+priors_fixef_col1 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
+)
+
+
+```
+
+
+
+
+# Speed Test
+
+## Speed Setups
+
+### install cmdstanr backend 
+
+CmdStanR executes the same Stan model with lower overhead(CmdStan avoids R’s interpreter and memory system during sampling, eliminating R↔C++ boundary crossings and allowing a tight, uninterrupted C++ execution loop.) and supports within-chain parallelization, allowing each MCMC chain to use multiple CPU threads.
+
+```{r}
+# 0) optional: only install cmdstanr if missing
+if (!requireNamespace("cmdstanr", quietly = TRUE)) {
+  install.packages(
+    "cmdstanr",
+    repos = c("https://mc-stan.org/r-packages/", "https://cloud.r-project.org")
+  )
+}
+
+library(cmdstanr)
+
+# 1) fix / configure the C++ toolchain (Rtools on Windows)
+cmdstanr::check_cmdstan_toolchain(fix = TRUE, quiet = FALSE)
+
+# 2) verify it worked
+cmdstanr::check_cmdstan_toolchain()
+
+# 3) install CmdStan itself (one-time, can take a while)
+cmdstanr::install_cmdstan()
+
+# 4) verify CmdStan is available
+cmdstanr::cmdstan_version()
+
+```
+
+
+### Check how many processors for parallelization the computer has available
+
+```{r cpu_info_vars, message=FALSE, warning=FALSE}
+library(parallel)
+
+# --- Detect CPU resources visible to R ---
+max_logical  <- parallel::detectCores(logical = TRUE)
+max_physical <- parallel::detectCores(logical = FALSE)
+
+cat("Logical processors available to R:", max_logical, "\n")
+cat("Physical cores available to R:   ", max_physical, "\n\n")
+
+# Windows-only: extra confirmation (optional)
+if (.Platform$OS.type == "windows") {
+  cpu_raw <- try(system("wmic cpu get NumberOfCores,NumberOfLogicalProcessors /value", intern = TRUE), silent = TRUE)
+  if (!inherits(cpu_raw, "try-error")) {
+    cpu_raw <- cpu_raw[nzchar(trimws(cpu_raw))]
+    cat("WMIC (Windows) reported:\n", paste(cpu_raw, collapse = "\n"), "\n\n")
+  }
+}
+
+# --- Choose brms settings (you can change the caps if you want) ---
+# Keep chains at 4 by default for diagnostics, but never exceed logical CPUs
+brms_chains <- min(4, max_logical)
+
+# Run chains in parallel up to physical cores (or fewer if chains < cores)
+brms_cores  <- min(max_physical, brms_chains)
+
+# For cmdstanr within-chain threading: use remaining logical threads per chain
+threads_per_chain <- max(1, floor(max_logical / brms_chains))
+
+cat("Suggested brms settings:\n")
+cat("- brms_chains =", brms_chains, "\n")
+cat("- brms_cores  =", brms_cores,  " (parallel chains)\n")
+cat("- threads_per_chain =", threads_per_chain, " (cmdstanr only)\n")
+```
+
+
+
+## normal rstan model, timing
+```{r }
+set.seed(123)
+
+time_rstan <- system.time({
+  m_col1_prior_rstan <- brm(
+    dplagoal ~ plaavspeed_c,
+    data    = data_col1,
+    family  = bernoulli(link = "logit"),
+    sample_prior = "only",
+    prior   = priors_fixef_col1,
+    iter    = 1000, warmup = 500,
+    chains  = brms_chains, cores = brms_cores,
+    backend = "rstan",
+    refresh = 0
+  )
+})
+
+time_rstan
+```
+
+
+
+## cmdstanr model
+
+```{r}
+
+library(cmdstanr)
+set.seed(123)
+
+#set threads
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+time_cmdstan <- system.time({
+  m_col1_prior_cmdstan <- brm(
+    dplagoal ~ plaavspeed_c,
+    data    = data_col1,
+    family  = bernoulli(link = "logit"),
+    sample_prior = "only",
+    prior   = priors_fixef_col1,
+    iter    = 1000, warmup = 500,
+    chains  = brms_chains, cores = brms_cores,
+    backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain),
+    refresh = 0
+  )
+})
+
+time_cmdstan
+```
+
+
+```{r}
+rbind(
+  rstan    = time_rstan,
+  cmdstanr = time_cmdstan
+)
+```
