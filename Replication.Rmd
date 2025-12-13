@@ -81,6 +81,7 @@ for (v in all_vars) {
 
 
 ```
+
 ```{r}
 # heatmap
 
@@ -145,46 +146,6 @@ plot_ly(
   )
 
 
-```
-
-Table 1
-```{r}
-#Panel A: Section Level
-Full_Sections <- round(mean(data$dfullsection),2)
-Overtime_Sections <- round(mean(data$section %in% c(10, 20)),2)
-Players_Distance <-
-Players_Sprints <-
-SMGP <- 
-Team_Distance <-
-Observations1 <- nrow(data)
-Observations2 <-
-
-#Panel B
-
-
-
-#
-Rounds <- n_distinct(data$played)
-Games <- n_distinct(data$gamenu)
-Teams <- n_distinct(data$team)
-Players <- n_distinct(data$player)
-Strikers <- n_distinct(data$player[data$position == 4])
-Midfielders <- n_distinct(data$player[data$position == 3])
-Defenders <- n_distinct(data$player[data$position == 2])
-
-```
-
-#Table 2
-```{r}
-#daten neu laden weil positions variable weg ist
-data <- read_dta("original&computed_DB_forrep.dta")
-```
-
-```{r}
-#preparation 
-library(dplyr)
-library(tidyr)
-library(brms)
 ```
 
 
@@ -279,6 +240,9 @@ team_game_redcards <- data_base %>%
 
 ```
 
+```{r}
+mean(data$dfullsection, na.rm = TRUE)
+```
 
 
 ```{r}
@@ -297,7 +261,7 @@ panelA_vars <- list(
 
 panelA <- data_base %>% 
   summarise(
-    FullSections_mean     = mean(dfullsection, na.rm = TRUE),
+    FullSections_mean     = mean(data$dfullsection, na.rm = TRUE),
     Overtime_mean         = round(mean(data$section %in% c(10, 20)),2),
     PlayerDistance_mean   = mean(playerdist, na.rm = TRUE),
     PlayerDistance_sd     = sd(playerdist, na.rm = TRUE),
@@ -307,7 +271,7 @@ panelA <- data_base %>%
     GoalProb_sd           = sd(SMGP, na.rm = TRUE),
     TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
     TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
-    Observations_PS       = nrow(data_base),
+    Observations_PS       = nrow(data),
     Observations_TS       = TG_combinations*20         #18 oder 20?
   )
 
