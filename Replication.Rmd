@@ -18,6 +18,8 @@ library(tidybayes)
 library(brms)
 library(bayesplot)
 library(posterior)
+library(dagitty)
+library(ggdag)
 
 ```
 
@@ -198,6 +200,52 @@ data_base <- data_base  %>% mutate(player = factor(player),
                                     gamenu = factor(gamenu),
                                     section = factor(section))
 ```
+
+## DAGs
+```{r}
+dag1 <- dagitty("dag{
+                S -> G
+                NoS -> G
+                NoS -> S 
+                E -> S
+                E -> NoS}")
+
+coordinates(dag1) <- list( 
+                          x = c(S = 0, NoS = 1, G = 2, E = 0) , 
+                          y = c(S = 0, NoS = 1, G = 0, E = 1))
+
+ggdag( dag1 ) + 
+  ggtitle( "(1) Effort influences Speed & Number of Sprints;\n(2) Speed influences Goal Probability;\n(3) Number of Sprints influences Speed & Goal Probability" ) +
+  theme_dag()
+
+
+
+dag2 <- dagitty("dag{
+                D -> W
+                OD -> W
+                }")
+
+coordinates(dag2) <- list( 
+                          x = c(D = 0, OD = 2, W = 1) , 
+                          y = c(D = 0, OD = 0, W = 0))
+
+ggdag( dag2 ) + 
+  ggtitle( "(1) Team Distance influences Team Winning Probability;\n(2) Opponent Distance influences Team Winning Probability" ) +
+  theme_dag()
+```
+```{r}
+library(fixest)
+
+reg1 <- feols(dplagoal ~ plaavspeed, data = data_base)
+reg2 <- feols(dplagoal ~ playersprints, data = data_base)
+reg3 <- feols(dplagoal ~ plaavspeed + playersprints, data = data_base)
+reg4 <- feols(plaavspeed ~ playersprints, data = data_base)
+
+etable(reg1, reg2, reg3, reg4)
+
+```
+
+
 
 ## Summary Statistics
 
