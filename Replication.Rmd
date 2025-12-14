@@ -901,7 +901,6 @@ m_col3 <- add_criterion(m_col3, c("loo", "waic"))
 ```
 
 ```{r}
-
 saveRDS(m_col3, "m_col3.rds")
 ```
 
