@@ -49,8 +49,8 @@ data %>%
   keep(is.numeric) %>%                     # Keep only numeric columns
   gather() %>%                             # Convert to key-value pairs
   ggplot(aes(value)) +                     # Plot the values
-    facet_wrap(~ key, scales = "free") +   # In separate panels
-    geom_histogram() 
+  facet_wrap(~ key, scales = "free") +   # In separate panels
+  geom_histogram() 
 ```
 
 
@@ -151,18 +151,18 @@ Table 1
 Full_Sections <- round(mean(data$dfullsection),2)
 Overtime_Sections <- round(mean(data$section %in% c(10, 20)),2)
 Players_Distance <-
-Players_Sprints <-
-SMGP <- 
-Team_Distance <-
-Observations1 <- nrow(data)
+  Players_Sprints <-
+  SMGP <- 
+  Team_Distance <-
+  Observations1 <- nrow(data)
 Observations2 <-
-
-#Panel B
-
-
-
-#
-Rounds <- n_distinct(data$played)
+  
+  #Panel B
+  
+  
+  
+  #
+  Rounds <- n_distinct(data$played)
 Games <- n_distinct(data$gamenu)
 Teams <- n_distinct(data$team)
 Players <- n_distinct(data$player)
@@ -195,8 +195,8 @@ data_base <- data %>%
     !(section %in% c(10, 20)) 
   )
 data_base <- data_base  %>% mutate(player = factor(player),
-                                    gamenu = factor(gamenu),
-                                    section = factor(section))
+                                   gamenu = factor(gamenu),
+                                   section = factor(section))
 ```
 
 ## Summary Statistics
@@ -215,9 +215,9 @@ data_base <- data_base %>%
 ```{r}
 # unique combinations of team and games
 TG_combinations <- data_base %>%
-     distinct(team, gamenu) %>%
-     nrow()
- 
+  distinct(team, gamenu) %>%
+  nrow()
+
 TG_combinations
 ```
 
@@ -270,7 +270,7 @@ panelA <- panelA %>%
     names_to = "Variable",
     values_to = "Value"
   )
- 
+
 ```
 
 ```{r}
@@ -333,8 +333,8 @@ panelB <- data %>%
     RedCardProb_mean      = mean(redcard$any_red, na.rm = TRUE),
     RedCardProb_sd        = sd(redcard$any_red, na.rm = TRUE),
     Obs_player_game       = data %>% 
-  filter(dfullsection == 1 & !(section %in% c(10))) %>%
-  distinct(gamenu, player) %>% nrow(),
+      filter(dfullsection == 1 & !(section %in% c(10))) %>%
+      distinct(gamenu, player) %>% nrow(),
     Obs_team_game         = n_distinct(team, gamenu),
     
     Rounds                = n_distinct(played),
@@ -489,14 +489,14 @@ data_col7 <- data %>%
   summarise(
     # outcome: at least one goal by this player in this game
     goal_game        = as.integer(any(dplagoal == 1)),
-
+    
     # main regressor: game-average speed of the player
     plaavspeed_game  = first(plaavspeed_game),
-
+    
     # controls that are constant within a game for that player
     dhomegame        = first(dhomegame),
     rank_gap         = first(rank_gap),
-
+    
     .groups = "drop"
   ) %>%
   # drop missing info (e.g. if some game-level variable is NA)
@@ -696,7 +696,7 @@ m_col2_prior <- brm(
     factor(player) +      
     factor(gamenu) +     
     factor(section), 
-    sample_prior = "only",
+  sample_prior = "only",
   data    = data_col2,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col2,
@@ -722,7 +722,7 @@ m_col2 <- brm(
     factor(player) +      
     factor(gamenu) +     
     factor(section), 
-    #sample_prior = "only",
+  #sample_prior = "only",
   data    = data_col2,
   family  = bernoulli(link = "logit"),
   prior   = priors_fixef_col2,
@@ -850,10 +850,10 @@ data_col7 <- data_base %>%
   summarise(
     # Ziel: hat der Spieler in diesem Spiel mindestens 1 Tor?
     goal_game = as.integer(any(dplagoal == 1)),
-
+    
     # durchschnittliche Geschwindigkeit im Spiel
     plaavspeed_game = first(plaavspeed_game),
-
+    
     # Controls, die auf Spiel-Ebene konstant sind
     dhomegame = first(dhomegame),
     rank_gap  = first(rank_gap),
@@ -884,7 +884,25 @@ m_col7 <- brm(
 m_col7 <- add_criterion(m_col7, c("loo", "waic"))
 saveRDS(m_col7, "m_col7.rds")
 ```
+```{r}
+# Pick ONE model (change to m_col5, m_col6, m_col7 as needed)
+m <- m_col4
 
+# All numeric details
+summary(m)
+fixef(m)              # fixed effects table
+posterior_summary(m)  # full parameter summary
+prior_summary(m)      # priors used
+loo(m); waic(m)       # if you saved log_lik / add_criterion worked
+
+# Pictures / diagnostic plots
+pp_check(m, ndraws = 200)
+conditional_effects(m, spaghetti = TRUE, ndraws = 200)
+plot(m)               # trace/density + other default brms plots
+mcmc_plot(m, type = "rhat")
+mcmc_plot(m, type = "neff")
+
+```
 
 
 # hierarchical logistic models
@@ -1379,21 +1397,21 @@ slightly different sample sizes compared to the ones from table 3 in the paper (
 ```{r}
 #set weakly informative priors that fit logit scale 
 priors_t3 <- c( 
-set_prior("normal(0, 1)", class = "Intercept"), # 50% baseline chance angenommen, 95% masse in ca. [0.12, 0.88] 
-set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-set_prior("normal(0, 1)"))
+  set_prior("normal(0, 1)", class = "Intercept"), # 50% baseline chance angenommen, 95% masse in ca. [0.12, 0.88] 
+  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  set_prior("normal(0, 1)"))
 ```
 
 
 ```{r}
 m_t3col1_prior <- brm( 
-dteamwin ~ teamdist_c + oppdist_c + factor(played),
-data = table3_col1, 
-family = bernoulli(link = "logit"),
-sample_prior = "only",
-prior = priors_t3,
-iter = 1000, warmup = 500, chains = 4, cores = 4 
+  dteamwin ~ teamdist_c + oppdist_c + factor(played),
+  data = table3_col1, 
+  family = bernoulli(link = "logit"),
+  sample_prior = "only",
+  prior = priors_t3,
+  iter = 1000, warmup = 500, chains = 4, cores = 4 
 )
 ```
 
@@ -1431,9 +1449,9 @@ is multicollinearity causing problems here?
 lets test for col 5
 ```{r}
 priors_t3c5 <-c(
-set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
-set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
 )
 ```
 
@@ -1441,9 +1459,9 @@ set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
 ```{r}
 m_t3col5 <- brm(
   dteamwin ~ distance_ratio_c + 
-  dhomegame +
-  rank_gap_c +
-  factor(played),     
+    dhomegame +
+    rank_gap_c +
+    factor(played),     
   data    = table3_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c5,
