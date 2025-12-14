@@ -742,7 +742,7 @@ m_col1_prior <- brm(
   prior   = priors_fixef_col1,
   iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
-saveRDS(m_col1_prior, "m_col1_prior.rds")
+#saveRDS(m_col1_prior, "m_col1_prior.rds")
 ```
 
 
@@ -1567,5 +1567,119 @@ m_t3col5 <- brm(
 ```
 
 
+
+# Table 2 prior correction
+
+```{r}
+## Fixed-effects priors (for models with factor(player), factor(gamenu), factor(section))
+## Designed to be as close as possible in scale to the hierarchical setup.
+
+## 1) Base priors: used for columns 1–6
+priors_fixef_base <- c(
+  # same intercept prior as hierarchical cols 1–6
+  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
+  # default for all coefficients (incl. factor dummies), unless overridden below
+  set_prior("normal(0, 0.4)",   class = "b")
+)
+
+## 2) Column-specific priors: base + explicit priors for every covariate in that column
+
+### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
+priors_fixef_col1 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.04)", class = "b", coef = "plaavspeed_c")
+)
+# 
+
+
+### Column 2: add dhomegame, rank_gap_c, player_cumsections_c, player_cumsections_2_c
+priors_fixef_col2 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c")
+)
+
+### Column 3: add pre-match / lagged controls
+### dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c + player_cumsections_c + player_cumsections_2_c +
+###             scoregap_pre_c + dteamgoal_pre + dplagoal_pre + dteamred_pre + dteaminj_sec_pre +
+###             team_avespeed_pre_c + factors
+priors_fixef_col3 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+### Column 4: plus crowd & betting odds
+### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
+priors_fixef_col4 <- c(
+  priors_fixef_col3,  # all priors from col3 +
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_draw_c")
+)
+
+### Column 5: sprint effort instead of plaavspeed_c
+### dplagoal ~ playersprints_c + same controls as col3 + factors
+priors_fixef_col5 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+### Column 6: both plaavspeed_c and playersprints_c + same controls as col5
+priors_fixef_col6 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+## 3) Column 7: game-level model, wider priors like hierarchical priors_base_col7
+
+priors_fixef_base_col7 <- c(
+  set_prior("normal(-4.6, 1)", class = "Intercept"),  # more variation at game level
+  set_prior("normal(0, 0.5)", class = "b")           # all coefficients by default
+)
+
+### Column 7: goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c + factor(player) + factor(gamenu)
+priors_fixef_col7 <- c(
+  priors_fixef_base_col7,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "rank_gap_c")
+)
+
+```
 
 
