@@ -438,8 +438,66 @@ posterior_samples( m_intercept ) %>%
   transmute( alpha = inv_logit_scaled( b_Intercept )) %>% 
   mean_qi()
 ```
+## Column 1 scaled test
+```{r}
+data_col1s <- data_base %>%
+  drop_na(dplagoal, plaavspeed) %>%
+  mutate(
+    plaavspeed_s = scale(plaavspeed)
+  )
+```
+
+```{r}
+priors_fixef_base <- c(
+  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
+  set_prior("normal(0, 0.4)",   class = "b")
+)
+
+priors_fixef_col1 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
+)
+```
+
+```{r}
+sd(data_col1s$plaavspeed)
+```
+```{r}
+
+```
 
 
+```{r}
+library(cmdstanr)
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_col1_s <- brm(
+  dplagoal ~ plaavspeed_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  data    = data_col1s,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.4681233), class = "b", coef = "plaavspeed_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+saveRDS(m_col1_s, "m_col1_s_prior.rds")
+```
+
+```{r}
+col1s <- readRDS("m_col1_s_prior.rds")
+col1c <- readRDS("m_col1.rds")
+
+fixef(col1s) - fixef(col1c)
+
+```
 
 
 
