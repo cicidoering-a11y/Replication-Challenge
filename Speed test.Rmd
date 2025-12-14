@@ -390,7 +390,7 @@ rbind(
 )
 ```
 
-READ ME LEction: QR ist viel schneller besonders bei factor dummies wegen correlationen.
+#READ ME Lection: QR ist viel schneller besonders bei factor dummies wegen correlationen. Aber die coefficients und die priors sind nicht mehr brauchbar.
 
 
 ## compare results with OG model
