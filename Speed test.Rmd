@@ -153,10 +153,13 @@ set.seed(123)
 
 time_rstan <- system.time({
   m_col1_prior_rstan <- brm(
-    dplagoal ~ plaavspeed_c,
+    dplagoal ~ plaavspeed_c +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section),
     data    = data_col1,
     family  = bernoulli(link = "logit"),
-    sample_prior = "only",
+    #sample_prior = "only",
     prior   = priors_fixef_col1,
     iter    = 1000, warmup = 500,
     chains  = brms_chains, cores = brms_cores,
@@ -177,16 +180,22 @@ time_rstan
 library(cmdstanr)
 set.seed(123)
 
-#set threads
+# no mulitthreading
+# threads_per_chain <- 1
+
+#set threads for multithreading
 Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
 
 
 time_cmdstan <- system.time({
   m_col1_prior_cmdstan <- brm(
-    dplagoal ~ plaavspeed_c,
+    dplagoal ~ plaavspeed_c +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section),
     data    = data_col1,
     family  = bernoulli(link = "logit"),
-    sample_prior = "only",
+    #sample_prior = "only",
     prior   = priors_fixef_col1,
     iter    = 1000, warmup = 500,
     chains  = brms_chains, cores = brms_cores,
@@ -206,3 +215,286 @@ rbind(
   cmdstanr = time_cmdstan
 )
 ```
+
+
+# READ ME Lection:
+There are two components that determine runtime. The first is compilation, which translates the model specification(formula and distribution types) into machine-executable code. The second is sampling, during which the MCMC algorithm explores the posterior distribution. 
+Once a model is compiled, changes to the data or prior hyperparameters do not require recompilation and only affect sampling time. 
+CmdStan typically incurs higher one-time compilation costs but achieves faster sampling. In contrast, rstan usually compiles more quickly but has slower sampling performance. 
+-> For models with many predictors or complex structures, sampling time dominates total runtime, making CmdStan the preferred backend.
+
+Within-chain threading introduces overhead and is only beneficial once the per-iteration computational cost of the model is sufficiently large, which is typically the case for complex or high-dimensional models.
+-> For models with many predictors or complex structures, multithreading makes sense.
+
+Idea: compile once with tiny model and sample then with more iterations and stuff?
+
+
+
+
+# Teste Laufzeit am größten modell
+
+```{r}
+data_col4 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2,
+    scoregap_pre, dteamgoal_pre, dplagoal_pre,
+    dteamred_pre, dteaminj_sec_pre,
+    team_avespeed_pre,
+    team_crowd, opp_crowd,
+    p_odds_team, p_odds_draw
+  ) %>%
+  mutate(
+    plaavspeed_c           = plaavspeed - mean(plaavspeed, na.rm = TRUE),
+    rank_gap_c             = rank_gap - mean(rank_gap, na.rm = TRUE),
+    player_cumsections_c   = player_cumsections - mean(player_cumsections, na.rm = TRUE),
+    player_cumsections_2_c = player_cumsections_2 - mean(player_cumsections_2, na.rm = TRUE),
+    scoregap_pre_c         = scoregap_pre - mean(scoregap_pre, na.rm = TRUE),
+    team_avespeed_pre_c    = team_avespeed_pre - mean(team_avespeed_pre, na.rm = TRUE),
+    team_crowd_c           = team_crowd - mean(team_crowd, na.rm = TRUE),
+    opp_crowd_c            = opp_crowd - mean(opp_crowd, na.rm = TRUE),
+    p_odds_team_c          = p_odds_team - mean(p_odds_team, na.rm = TRUE),
+    p_odds_draw_c          = p_odds_draw - mean(p_odds_draw, na.rm = TRUE)
+  )
+
+
+### Column 4: plus crowd & betting odds
+### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
+priors_fixef_col3 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+priors_fixef_col4 <- c(
+  priors_fixef_col3,  # all priors from col3 +
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_draw_c")
+)
+```
+
+
+## Standard
+
+```{r}
+time_rstan <- system.time({
+  m_col4 <- brm(
+    dplagoal ~
+      plaavspeed_c +
+      dhomegame + rank_gap_c +
+      player_cumsections_c + player_cumsections_2_c +
+      scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+      dteamred_pre + dteaminj_sec_pre +
+      team_avespeed_pre_c +
+      team_crowd_c + opp_crowd_c +
+      p_odds_team_c + p_odds_draw_c +
+      factor(player) +      
+      factor(gamenu) +     
+      factor(section), 
+    data    = data_col4,
+    family  = bernoulli(link = "logit"),
+    prior   = priors_fixef_col4,
+    chains  = brms_chains, cores = brms_cores,
+    iter = 2000, warmup = 1000,
+    backend = "rstan",
+    save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
+  )
+})
+
+time_rstan
+```
+
+## CMD Backend
+
+```{r}
+time_cmdstan <- system.time({
+  m_col4 <- brm(
+    dplagoal ~
+      plaavspeed_c +
+      dhomegame + rank_gap_c +
+      player_cumsections_c + player_cumsections_2_c +
+      scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+      dteamred_pre + dteaminj_sec_pre +
+      team_avespeed_pre_c +
+      team_crowd_c + opp_crowd_c +
+      p_odds_team_c + p_odds_draw_c +
+      factor(player) +      
+      factor(gamenu) +     
+      factor(section), 
+    data    = data_col4,
+    family  = bernoulli(link = "logit"),
+    prior   = priors_fixef_col4,
+    chains  = brms_chains, cores = brms_cores,
+    iter = 2000, warmup = 1000,
+    backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain),
+    save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
+  )
+})
+
+time_cmdstan #43235.63 sekunden ~12h
+
+```
+
+## QR
+
+```{r}
+time_QR <- system.time({
+  m_col4 <- brm(
+    bf(
+    dplagoal ~
+      plaavspeed_c +
+      dhomegame + rank_gap_c +
+      player_cumsections_c + player_cumsections_2_c +
+      scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+      dteamred_pre + dteaminj_sec_pre +
+      team_avespeed_pre_c +
+      team_crowd_c + opp_crowd_c +
+      p_odds_team_c + p_odds_draw_c +
+      factor(player) +      
+      factor(gamenu) +     
+      factor(section), 
+      decomp = "QR"),
+    data    = data_col4,
+    family  = bernoulli(link = "logit"),
+    prior   = priors_fixef_col4,
+    chains  = brms_chains, cores = brms_cores,
+    iter = 2000, warmup = 1000,
+    backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain),
+    save_pars = save_pars(all = TRUE)   # ensures log-lik etc. are stored
+  )
+})
+
+time_QR  
+
+```
+
+
+```{r}
+rbind(
+  cmdstanr = time_cmdstan,
+  QR  = time_QR
+)
+```
+
+READ ME LEction: QR ist viel schneller besonders bei factor dummies wegen correlationen.
+
+
+## compare results with OG model
+
+```{r}
+# find out how to extract the QR "weights"
+
+library(brms)
+library(posterior)
+
+safe <- function(expr) {
+  tryCatch(expr, error = function(e) paste("ERROR:", conditionMessage(e)))
+}
+
+cat("\n--- BASIC ---\n")
+print(safe(class(m_col4)))
+print(safe(m_col4$family))
+
+cat("\n--- FORMULA (safe) ---\n")
+# formula(m_col4) is usually safe; avoid brmsformula printing methods
+print(safe(formula(m_col4)))
+
+cat("\n--- VARIABLES() (first 80) ---\n")
+v <- safe(variables(m_col4))
+print(v)
+if (!is.character(v)) stop("variables(m_col4) failed; cannot proceed.")
+
+cat("\n--- bQ_ PARAMETERS ---\n")
+bQ <- grep("^bQ_", v, value = TRUE)
+cat("Count bQ_ params:", length(bQ), "\n")
+print(head(bQ, 80))
+
+cat("\n--- STANDATA NAMES (QR/R candidates) ---\n")
+sd <- safe(standata(m_col4))
+if (!is.list(sd)) stop("standata(m_col4) failed; cannot proceed.")
+
+nms <- names(sd)
+cand <- nms[grepl("qr|QR|R_|\\bR\\b|decomp|Q_|Rinv|inv", nms)]
+cat("Candidate names count:", length(cand), "\n")
+print(cand)
+
+cat("\n--- DIMENSIONS OF CANDIDATES ---\n")
+dims <- lapply(sd[cand], function(x) if (is.null(dim(x))) NA else dim(x))
+print(dims)
+
+cat("\n--- ALL objects in standata() that have dim() (first 60 names) ---\n")
+mat_names <- nms[vapply(sd, function(x) !is.null(dim(x)), logical(1))]
+cat("Total dim() objects:", length(mat_names), "\n")
+print(head(mat_names, 60))
+
+cat("\n--- DONE ---\n")
+
+
+```
+
+```{r}
+library(brms)
+library(posterior)
+library(MASS)  # for ginv()
+
+sd <- standata(m_col4)
+X  <- sd$X
+
+draws <- as_draws_df(m_col4)
+
+# bQ indices robustly (no "NAs introduced by coercion")
+bQ_cols <- grep("^bQ\\[[0-9]+\\]$", names(draws), value = TRUE)
+if (!length(bQ_cols)) stop("No bQ[...] parameters found.")
+
+bQ_idx  <- as.integer(sub("^bQ\\[([0-9]+)\\]$", "\\1", bQ_cols))
+ord     <- order(bQ_idx)
+bQ_cols <- bQ_cols[ord]
+K       <- length(bQ_cols)
+
+# Align X to K (Intercept often not in QR block)
+if (ncol(X) == K + 1) {
+  is_const <- apply(X, 2, function(z) all(abs(z - z[1]) < 1e-12))
+  X <- X[, !is_const, drop = FALSE]
+  if (ncol(X) != K) X <- X[, 1:K, drop = FALSE]  # last-resort alignment
+}
+stopifnot(ncol(X) == K)
+
+# Recompute R from X
+R <- qr.R(qr(X))
+
+# theta draws
+theta <- as.matrix(draws[, bQ_cols, drop = FALSE])  # draws x K
+
+# Back-transform using pseudo-inverse (works even if R is singular)
+R_pinv <- MASS::ginv(R)
+beta   <- t(R_pinv %*% t(theta))                    # draws x K
+
+# Summarize
+beta_summary <- data.frame(
+  j        = 1:K,
+  Estimate = colMeans(beta),
+  Est.Error = apply(beta, 2, sd),
+  Q2.5     = apply(beta, 2, quantile, probs = 0.025),
+  Q97.5    = apply(beta, 2, quantile, probs = 0.975)
+)
+
+print(beta_summary)
+
+
+
+```
+
