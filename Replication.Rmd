@@ -1975,7 +1975,7 @@ data_t2c2 <- data_base %>%
 ```
 
 ```{r}
-sd(data_t2c2$player_cumsections_2)*0.1/100
+inv_logit_scaled(0.1/sd(data_t2c2$plaavspeed))
 ```
 
 
@@ -1994,7 +1994,7 @@ m_t2c2_fe <- brm(
     factor(player) +      
     factor(gamenu) +     
     factor(section), 
-  sample_prior = "only",
+  #sample_prior = "only",
   data    = data_t2c2,
   family  = bernoulli(link = "logit"),
   prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
@@ -2011,5 +2011,174 @@ m_t2c2_fe <- brm(
 
 pp_check(m_t2c2_fe)
 
-#saveRDS(m_t2c2_fe, "m_t2c2_fe.rds")
+saveRDS(m_t2c2_fe, "m_t2c2_fe.rds")
+```
+
+### ML
+
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c2_ml <- brm(
+  dplagoal ~ plaavspeed_s +
+    dhomegame +
+    rank_gap_s +
+    player_cumsections_s + 
+    player_cumsections_2_s +
+    (1 | player) +
+    (1 | gamenu) +
+    (1 | section),
+  #sample_prior = "only",
+  data    = data_t2c2,
+  family  = bernoulli(link = "logit"),
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(normal(0, 0.2), class = "b", coef = "dhomegame"),
+               prior(normal(0, 1.017136), class = "b", coef = "rank_gap_s"),
+               prior(normal(0, 1.076926), class = "b", coef = "player_cumsections_s"),
+               prior(normal(0, 0.1060295), class = "b", coef = "player_cumsections_2_s"),
+               prior(exponential(1), class = "sd")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c2_ml)
+
+saveRDS(m_t2c2_ml, "m_t2c2_ml.rds")
+```
+```{r}
+# Add WAIC criterion
+m1_brms <- add_criterion(m_t2c2_fe, "waic")
+m2_brms <- add_criterion(m_t2c2_ml, "waic")
+
+# Compare models by WAIC (lower WAIC = better)
+loo_compare(m1_brms, m2_brms, criterion = "waic") %>% print( simplify = FALSE )
+```
+
+## Column 3
+```{r}
+data_t2c3 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed, playersprints,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2,
+    scoregap_pre, dteamgoal_pre, dplagoal_pre,
+    dteamred_pre, dteaminj_sec_pre,
+    team_avespeed_pre
+  ) %>%
+  mutate(
+    plaavspeed_s           = scale(plaavspeed) ,
+    playersprints_s        = scale(playersprints),
+    rank_gap_s             = scale(rank_gap),
+    player_cumsections_s   = scale(player_cumsections),
+    player_cumsections_2_s = scale(player_cumsections_2),
+    scoregap_pre_s         = scale(scoregap_pre),
+    team_avespeed_pre_s    = scale(team_avespeed_pre)
+  )
+```
+
+### FE
+```{r}
+sd(data_t2c3$)
+```
+
+  
+
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c3_fe <- brm(
+  dplagoal ~ plaavspeed_s +
+    dhomegame +
+    rank_gap_s +
+    player_cumsections_s + 
+    player_cumsections_2_s + 
+    scoregap_pre_s + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  #sample_prior = "only",
+  data    = data_t2c3,
+  family  = bernoulli(link = "logit"),
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(normal(0, 0.2), class = "b", coef = "dhomegame"),
+               prior(normal(0, 1.017136), class = "b", coef = "rank_gap_s"),
+               prior(normal(0, 1.076926), class = "b", coef = "player_cumsections_s"),
+               prior(normal(0, 0.1060295), class = "b", coef = "player_cumsections_2_s"),
+               prior(normal(0, 0.2), class = "b", coef = "scoregap_pre_s"),
+               prior(normal(0, 0.5), class = "b", coef = "dteamgoal_pre"),
+               prior(normal(0, 0.5), class = "b", coef = "dplagoal_pre"),
+               prior(normal(0, 0.5), class = "b", coef = "dteamred_pre"),
+               prior(normal(0, 0.2), class = "b", coef = "dteaminj_sec_pre"),
+               prior(normal(0, 0.2), class = "b", coef = "team_avespeed_pre_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c3_fe)
+
+saveRDS(m_t2c3_fe, "m_t2c3_fe.rds")
+```
+
+### ML
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c3_ml <- brm(
+  dplagoal ~ plaavspeed_s +
+    dhomegame +
+    rank_gap_s +
+    player_cumsections_s + 
+    player_cumsections_2_s + 
+    scoregap_pre_s + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre +
+    team_avespeed_pre_s +
+    (1 | player) + (1 | gamenu) + (1 | section), 
+  #sample_prior = "only",
+  data    = data_t2c3,
+  family  = bernoulli(link = "logit"),
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(normal(0, 0.2), class = "b", coef = "dhomegame"),
+               prior(normal(0, 1.017136), class = "b", coef = "rank_gap_s"),
+               prior(normal(0, 1.076926), class = "b", coef = "player_cumsections_s"),
+               prior(normal(0, 0.1060295), class = "b", coef = "player_cumsections_2_s"),
+               prior(normal(0, 0.2), class = "b", coef = "scoregap_pre_s"),
+               prior(normal(0, 0.5), class = "b", coef = "dteamgoal_pre"),
+               prior(normal(0, 0.5), class = "b", coef = "dplagoal_pre"),
+               prior(normal(0, 0.5), class = "b", coef = "dteamred_pre"),
+               prior(normal(0, 0.2), class = "b", coef = "dteaminj_sec_pre"),
+               prior(normal(0, 0.2), class = "b", coef = "team_avespeed_pre_s"),
+               prior(exponential(1), class = "sd")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c3_ml)
+
+saveRDS(m_t2c3_ml, "m_t2c3_ml.rds")
+```
+
+```{r}
+# Add WAIC criterion
+m1_brms <- add_criterion(m_t2c3_fe, "waic")
+m2_brms <- add_criterion(m_t2c3_ml, "waic")
+
+# Compare models by WAIC (lower WAIC = better)
+loo_compare(m1_brms, m2_brms, criterion = "waic") %>% print( simplify = FALSE )
 ```
