@@ -1603,12 +1603,38 @@ cor(table3_col1 %>% select(teamdist_c, oppdist_c, distance_ratio_c, total_distan
 
 is multicollinearity causing problems here?
 
-lets test for col 5
+lets test for col 5:
+below we impose reasonably skeptical priors. What the priors say:
+Distance ratio matters, but not absurdly.
+Home advantage is modest.
+Rank gap matters a little, but not too much.
+If distance_ratio_c large ->data-driven
+If it shrinks strongly ->prior-sensitive result
+Regression Coefficients:
+                 Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept           -0.77      0.24    -1.24    -0.32 1.00     8739     5846
+distance_ratio_c     0.01      0.10    -0.19     0.21 1.00    14688     5933
+dhomegame            0.29      0.26    -0.23     0.81 1.00    15216     5543
+rank_gap_c          -0.18      0.04    -0.26    -0.11 1.00     7725     4957
+
+--> given reasonable skepticism, the data do not strongly identify a positive causal effect of relative distance
+--> When estimating a game-level win probability with pair and round effects, the effect of relative running distance is highly sensitive to modeling assumptions. Under weakly informative priors and partial pooling, the posterior mass concentrates near zero, indicating limited identifying variation once unobserved heterogeneity is accounted for.
+
+If we set our priors such that we allow/expect huge effects (set_prior("normal(0, 3)", class = "b", coef = "distance_ratio_c"), we can produce point estimates for distance_ratio_c similar to those in the paper (and *** significance level). This indicates that the data are weakly informative about the effect of distance_ratio_c and therefore the posterior is very sensitive to the prior. Priors should therefore be set in a way that seems intuitive -> "home advantage exists but is modest, rank gap matters (how much though), distance_ratio matters very little?"
+After controlling for pair and round heterogeneity, there is very little variation left which can be uniquely attributed to distance_ratio. (prior heavily dominates the likelihood)
+
+Ideas for why the authors get such a strong estimate for distance_ratio in the paper:
+classical fixed-effects logit assumes asymptotic identification, does not penalize overparameterization, reports a single MLE even when likelihood curvature is weak
+--> it answers: "what coefficient maximizes the likelihood?" rather than "how confident should we be about this magnitude?"
+In our bayesian model, the data provide little to no evidence for a sizable effect of distance_ratio on winning probabilities given the fixed effects. Under reasonable priors, the posterior mass is concentratred near zero.
+Important: the model doesnt prove that the effect is weak! It instead says that the data do not support a strong effect of distance_ratio on winning probability.
+
+
 ```{r}
 priors_t3c5 <-c(
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c")
 )
 ```
 
