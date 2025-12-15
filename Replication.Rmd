@@ -1385,7 +1385,26 @@ table2_summary %>%
 
 
 # Table 3
+##Intercept-only
+```{r}
+m_t3_intercept <- brm(
+  dteamwin ~ 1, 
+  data    = data_teamxgame,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior = prior( normal(0, 1), class = Intercept),      
+  iter    = 1000, warmup = 500, chains = 4, cores = 4
+)
 
+pp_check(m_t3_intercept)
+
+saveRDS(m_t3_intercept, "m_t3_intercept.rds")
+
+```
+```{r}
+readRDS("m_t3_intercept.rds")
+```
+Intercept estimate: -0.48 --> 38.2%
 
 ## Add Team Names for table 3
 ```{r}
