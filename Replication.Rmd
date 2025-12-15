@@ -20,6 +20,7 @@ library(bayesplot)
 library(posterior)
 library(dagitty)
 library(ggdag)
+library(cmdstanr)
 
 ```
 
@@ -149,45 +150,9 @@ plot_ly(
 ```
 
 <<<<<<< HEAD
-Table 1
-```{r}
-#Panel A: Section Level
-Full_Sections <- round(mean(data$dfullsection),2)
-Overtime_Sections <- round(mean(data$section %in% c(10, 20)),2)
-Players_Distance <-
-  Players_Sprints <-
-  SMGP <- 
-  Team_Distance <-
-  Observations1 <- nrow(data)
-Observations2 <-
-  
-  #Panel B
-  
-  
-  
-  #
-  Rounds <- n_distinct(data$played)
-Games <- n_distinct(data$gamenu)
-Teams <- n_distinct(data$team)
-Players <- n_distinct(data$player)
-Strikers <- n_distinct(data$player[data$position == 4])
-Midfielders <- n_distinct(data$player[data$position == 3])
-Defenders <- n_distinct(data$player[data$position == 2])
 
-```
 
-#Table 2
-```{r}
-#daten neu laden weil positions variable weg ist
-data <- read_dta("original&computed_DB_forrep.dta")
-```
 
-```{r}
-#preparation 
-library(dplyr)
-library(tidyr)
-library(brms)
-```
 
 =======
 >>>>>>> f70b8fff58bfa4992c2c937ac8c8c2af24ddc442
@@ -1774,3 +1739,146 @@ priors_fixef_col7 <- c(
 ```
 
 
+# Table 2 neu
+
+## Column 1
+```{r}
+data_t2c1 <- data_base %>%
+  drop_na(dplagoal, plaavspeed) %>%
+  mutate(
+    plaavspeed_s = scale(plaavspeed)
+  )
+```
+
+```{r}
+sd(data_t2c1$plaavspeed)
+```
+
+### FE
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c1_fe <- brm(
+  dplagoal ~ plaavspeed_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  data    = data_t2c1,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c1_fe)
+
+saveRDS(m_t2c1_fe, "m_t2c1_fe.rds")
+```
+
+```{r}
+readRDS("m_t2c1_fe.rds")
+```
+
+```{r}
+0.09/1.170308
+inv_logit_scaled(0.07690283)
+```
+
+### Multilevel
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c1_ml <- brm(
+  dplagoal ~ plaavspeed_s +
+    (1 | player) +        
+    (1 | gamenu) +        
+    (1 | section),  
+  data    = data_t2c1,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(exponential(1), class = "sd")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c1_ml)
+
+saveRDS(m_t2c1_ml, "m_t2c1_ml.rds")
+```
+
+```{r}
+# Add WAIC criterion
+m1_brms <- add_criterion(m_t2c1_fe, "waic")
+m2_brms <- add_criterion(m_t2c1_ml, "waic")
+
+# Compare models by WAIC (lower WAIC = better)
+loo_compare(m1_brms, m2_brms, criterion = "waic") %>% print( simplify = FALSE )
+```
+
+## Column 2
+```{r}
+data_t2c2 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2
+  ) %>%
+  mutate(
+    plaavspeed_s           = scale(plaavspeed),
+    rank_gap_s             = scale(rank_gap),
+    player_cumsections_s   = scale(player_cumsections),
+    player_cumsections_2_s = scale(player_cumsections_2)
+  )
+```
+
+```{r}
+sd(data_t2c2$player_cumsections_2)*0.1/100
+```
+
+
+### FE
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c2_fe <- brm(
+  dplagoal ~ plaavspeed_s +
+    dhomegame +
+    rank_gap_s +
+    player_cumsections_s + 
+    player_cumsections_2_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  sample_prior = "only",
+  data    = data_t2c2,
+  family  = bernoulli(link = "logit"),
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(normal(0, 0.2), class = "b", coef = "dhomegame"),
+               prior(normal(0, 1.017136), class = "b", coef = "rank_gap_s"),
+               prior(normal(0, 1.076926), class = "b", coef = "player_cumsections_s"),
+               prior(normal(0, 0.1060295), class = "b", coef = "player_cumsections_2_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c2_fe)
+
+#saveRDS(m_t2c2_fe, "m_t2c2_fe.rds")
+```
