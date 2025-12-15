@@ -1774,6 +1774,32 @@ summary(m_t3col6)
 ```
 
 
+#loo evaluation for table 3
+```{r}
+library(loo)
+#gibt es einen workaround für die unterschiedlich großen sample sizes? loo braucht gleiche observation counts
+# compute LOO objects
+loo_t3c1 <- loo(m_t3col1)
+loo_t3c2 <- loo(m_t3col2)
+loo_t3c3 <- loo(m_t3col3)
+loo_t3c4 <- loo(m_t3col4)
+loo_t3c5 <- loo(m_t3col5)
+loo_t3c6 <- loo(m_t3col6)
+
+# compare models
+loo_compare(
+  loo_t3c1,
+  loo_t3c2,
+ # loo_t3c3, 180 obs
+ # loo_t3c4, 152 obs
+  loo_t3c5,
+  loo_t3c6
+)
+
+```
+
+
+
 # Table 2 prior correction
 
 ```{r}
