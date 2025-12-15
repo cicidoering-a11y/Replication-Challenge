@@ -866,6 +866,7 @@ m_col3 <- add_criterion(m_col3, c("loo", "waic"))
 ```
 
 ```{r}
+
 saveRDS(m_col3, "m_col3.rds")
 ```
 
@@ -1444,6 +1445,8 @@ data_teamxgame <- data %>%
     danyteamredc_game = unique(danyteamredc_game),
     israeli_name      = unique(israeli_name),
     played            = unique(played),
+    p_odds_team       = unique(p_odds_team),
+    p_odds_draw       = unique(p_odds_draw),
     .groups = "drop"
   ) %>% 
   mutate(
@@ -1483,9 +1486,11 @@ data_teamxgame <- data_teamxgame %>%
     oppdist_c  = oppdist_game  - mean(oppdist_game,  na.rm = TRUE),
     distance_ratio_c  = distance_ratio - mean(distance_ratio, na.rm = TRUE),
     total_distance_c  = total_distance - mean(total_distance, na.rm = TRUE),
-    rank_gap_c   = rank_gap - mean(rank_gap, na.rm = TRUE),
-    team_crowd_c = team_crowd - mean(team_crowd, na.rm = TRUE),
-    opp_crowd_c  = opp_crowd - mean(opp_crowd, na.rm = TRUE)
+    rank_gap_c        = rank_gap - mean(rank_gap, na.rm = TRUE),
+    team_crowd_c      = team_crowd - mean(team_crowd, na.rm = TRUE),
+    opp_crowd_c       = opp_crowd - mean(opp_crowd, na.rm = TRUE),
+    p_odds_team_c     = p_odds_team - mean(p_odds_team, na.rm = TRUE),
+    p_odds_draw_c     = p_odds_draw - mean(p_odds_draw, na.rm = TRUE)
   )
 
 #datasets for each column 
@@ -1493,15 +1498,15 @@ table3_col1 <- data_teamxgame %>%
   drop_na(dteamwin, teamdist_game, oppdist_game)  
 
 table3_col2 <- data_teamxgame %>%
-  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap)
+  drop_na(dteamwin, teamdist_game, oppdist_game, dhomegame, rank_gap)
 
 table3_col3 <- data_teamxgame %>%
-  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap, team_crowd)
+  drop_na(dteamwin, teamdist_game, oppdist_game, dhomegame, rank_gap, team_crowd_c, opp_crowd_c, p_odds_team_c, p_odds_draw_c)
 
 table3_col4 <- data_teamxgame %>%
   # restrict to games without red cards
   filter(is.na(danyteamredc_game) | danyteamredc_game == 0) %>%
-  drop_na(dteamwin, teamdist_game, dhomegame, rank_gap)
+  drop_na(dteamwin, teamdist_game, oppdist_game, dhomegame, rank_gap)
 
 table3_col5 <- data_teamxgame %>%
   drop_na(dteamwin, distance_ratio, dhomegame, rank_gap)
@@ -1515,9 +1520,10 @@ sapply(list(table3_col1, table3_col2, table3_col3, table3_col4, table3_col5, tab
 
 slightly different sample sizes compared to the ones from table 3 in the paper (why?)
 
+#col1
 ```{r}
 #set weakly informative priors that fit logit scale 
-priors_t3 <- c( 
+priors_t3c1 <- c( 
   set_prior("normal(0, 1)", class = "Intercept"), # 50% baseline chance angenommen, 95% masse in ca. [0.12, 0.88] 
   set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
   set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
@@ -1531,7 +1537,7 @@ m_t3col1_prior <- brm(
   data = table3_col1, 
   family = bernoulli(link = "logit"),
   sample_prior = "only",
-  prior = priors_t3,
+  prior = priors_t3c1,
   iter = 1000, warmup = 500, chains = 4, cores = 4 
 )
 ```
@@ -1564,10 +1570,105 @@ plot(m_t3col1)
 ```{r}
 cor(table3_col1 %>% select(teamdist_c, oppdist_c, distance_ratio_c, total_distance_c), use = "pairwise.complete.obs")
 ```
+is multicollinearity causing problems here in col1?
 
-is multicollinearity causing problems here?
 
-lets test for col 5:
+
+#col2
+```{r}
+priors_t3c2 <- c( 
+  set_prior("normal(0, 1)", class = "Intercept"),
+  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+)
+```
+
+```{r}
+m_t3col2 <- brm(
+  dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played) +
+    dhomegame +
+    rank_gap_c,     
+  data    = table3_col2,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3c2,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4,
+  control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
+)
+summary(m_t3col2)
+#plot(m_t3col2)
+```
+
+
+#col3
+```{r}
+priors_t3c3 <- c( 
+  set_prior("normal(0, 1)", class = "Intercept"),
+  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "p_odds_draw_c")
+)
+```
+
+```{r}
+m_t3col3 <- brm(
+  dteamwin ~ 
+    teamdist_c + 
+    oppdist_c + 
+    team_crowd_c +
+    opp_crowd_c +
+    p_odds_team_c +
+    p_odds_draw_c +
+    (1 | pair) + 
+    (1 | played) +
+    dhomegame +
+    rank_gap_c,     
+  data    = table3_col3,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3c3,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4,
+  control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
+)
+summary(m_t3col3)
+#plot(m_t3col3)
+```
+
+#col4
+```{r}
+priors_t3c4 <- c( 
+  set_prior("normal(0, 1)", class = "Intercept"),
+  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+)
+```
+
+```{r}
+m_t3col4 <- brm(
+  dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played) +
+    dhomegame +
+    rank_gap_c,     
+  data    = table3_col4,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3c4,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4,
+  control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
+)
+summary(m_t3col4)
+#plot(m_t3col4)
+```
+
+
+
+#col5
+
 below we impose reasonably skeptical priors. What the priors say:
 Distance ratio matters, but not absurdly.
 Home advantage is modest.
@@ -1576,10 +1677,10 @@ If distance_ratio_c large ->data-driven
 If it shrinks strongly ->prior-sensitive result
 Regression Coefficients:
                  Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept           -0.77      0.24    -1.24    -0.32 1.00     8739     5846
-distance_ratio_c     0.01      0.10    -0.19     0.21 1.00    14688     5933
-dhomegame            0.29      0.26    -0.23     0.81 1.00    15216     5543
-rank_gap_c          -0.18      0.04    -0.26    -0.11 1.00     7725     4957
+Intercept           -0.77      0.24    -1.26    -0.29 1.00    10422     5941
+distance_ratio_c     0.01      0.10    -0.18     0.20 1.00    16599     5784
+dhomegame            0.29      0.26    -0.23     0.81 1.00    16276     6145
+rank_gap_c          -0.18      0.04    -0.26    -0.11 1.00    10318     5311
 
 --> given reasonable skepticism, the data do not strongly identify a positive causal effect of relative distance
 --> When estimating a game-level win probability with pair and round effects, the effect of relative running distance is highly sensitive to modeling assumptions. Under weakly informative priors and partial pooling, the posterior mass concentrates near zero, indicating limited identifying variation once unobserved heterogeneity is accounted for.
@@ -1598,7 +1699,7 @@ Important: the model doesnt prove that the effect is weak! It instead says that 
 priors_t3c5 <-c(
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c")
+  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c") # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
 )
 ```
 
@@ -1608,18 +1709,49 @@ m_t3col5 <- brm(
   dteamwin ~ distance_ratio_c + (1 | pair) + (1 | played) +
     dhomegame +
     rank_gap_c,     
-  data    = table3_col1,
+  data    = table3_col5,
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c5,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
+
 ```{r}
 summary(m_t3col5)
 #pp_check(m_t3col5, ndraws = 100)
 #conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
 #plot(m_t3col5)
+```
+
+#col6
+how do we choose priors?
+distance_ratio --> relative effort (could have moderate effect)
+total_distance --> game intensity/pace (probably weak effect if at all? guessing its near zero)
+aim for weak regularization
+
+```{r}
+priors_t3c6 <-c(
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 2)", class = "b", coef = "distance_ratio_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "total_distance_c")
+)
+```
+
+```{r}
+m_t3col6 <- brm(
+  dteamwin ~ distance_ratio_c + total_distance_c + (1 | pair) + (1 | played) +
+    dhomegame +
+    rank_gap_c,     
+  data    = table3_col6,
+  family  = bernoulli(link = "logit"),
+  prior   = priors_t3c6,
+  iter    = 4000, warmup = 2000, chains = 4, cores = 4,
+  control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
+)
+summary(m_t3col6)
+#plot(m_t3col6)
 ```
 
 
