@@ -20,6 +20,7 @@ library(bayesplot)
 library(posterior)
 library(dagitty)
 library(ggdag)
+library(cmdstanr)
 
 ```
 
@@ -149,45 +150,9 @@ plot_ly(
 ```
 
 <<<<<<< HEAD
-Table 1
-```{r}
-#Panel A: Section Level
-Full_Sections <- round(mean(data$dfullsection),2)
-Overtime_Sections <- round(mean(data$section %in% c(10, 20)),2)
-Players_Distance <-
-  Players_Sprints <-
-  SMGP <- 
-  Team_Distance <-
-  Observations1 <- nrow(data)
-Observations2 <-
-  
-  #Panel B
-  
-  
-  
-  #
-  Rounds <- n_distinct(data$played)
-Games <- n_distinct(data$gamenu)
-Teams <- n_distinct(data$team)
-Players <- n_distinct(data$player)
-Strikers <- n_distinct(data$player[data$position == 4])
-Midfielders <- n_distinct(data$player[data$position == 3])
-Defenders <- n_distinct(data$player[data$position == 2])
 
-```
 
-#Table 2
-```{r}
-#daten neu laden weil positions variable weg ist
-data <- read_dta("original&computed_DB_forrep.dta")
-```
 
-```{r}
-#preparation 
-library(dplyr)
-library(tidyr)
-library(brms)
-```
 
 =======
 >>>>>>> f70b8fff58bfa4992c2c937ac8c8c2af24ddc442
@@ -785,7 +750,7 @@ m_col1_prior <- brm(
   prior   = priors_fixef_col1,
   iter    = 1000, warmup = 500, chains = 4, cores = 4
 )
-saveRDS(m_col1_prior, "m_col1_prior.rds")
+#saveRDS(m_col1_prior, "m_col1_prior.rds")
 ```
 
 
@@ -1562,21 +1527,12 @@ priors_t3 <- c(
 
 ```{r}
 m_t3col1_prior <- brm( 
-<<<<<<< HEAD
-  dteamwin ~ teamdist_c + oppdist_c + factor(played),
+  dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played),
   data = table3_col1, 
   family = bernoulli(link = "logit"),
   sample_prior = "only",
   prior = priors_t3,
   iter = 1000, warmup = 500, chains = 4, cores = 4 
-=======
-dteamwin ~ teamdist_c + oppdist_c + factor(played) + factor(pair),
-data = table3_col1, 
-family = bernoulli(link = "logit"),
-sample_prior = "only",
-prior = priors_t3,
-iter = 1000, warmup = 500, chains = 4, cores = 4 
->>>>>>> f70b8fff58bfa4992c2c937ac8c8c2af24ddc442
 )
 ```
 
@@ -1611,22 +1567,47 @@ cor(table3_col1 %>% select(teamdist_c, oppdist_c, distance_ratio_c, total_distan
 
 is multicollinearity causing problems here?
 
-lets test for col 5
+lets test for col 5:
+below we impose reasonably skeptical priors. What the priors say:
+Distance ratio matters, but not absurdly.
+Home advantage is modest.
+Rank gap matters a little, but not too much.
+If distance_ratio_c large ->data-driven
+If it shrinks strongly ->prior-sensitive result
+Regression Coefficients:
+                 Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept           -0.77      0.24    -1.24    -0.32 1.00     8739     5846
+distance_ratio_c     0.01      0.10    -0.19     0.21 1.00    14688     5933
+dhomegame            0.29      0.26    -0.23     0.81 1.00    15216     5543
+rank_gap_c          -0.18      0.04    -0.26    -0.11 1.00     7725     4957
+
+--> given reasonable skepticism, the data do not strongly identify a positive causal effect of relative distance
+--> When estimating a game-level win probability with pair and round effects, the effect of relative running distance is highly sensitive to modeling assumptions. Under weakly informative priors and partial pooling, the posterior mass concentrates near zero, indicating limited identifying variation once unobserved heterogeneity is accounted for.
+
+If we set our priors such that we allow/expect huge effects (set_prior("normal(0, 3)", class = "b", coef = "distance_ratio_c"), we can produce point estimates for distance_ratio_c similar to those in the paper (and *** significance level). This indicates that the data are weakly informative about the effect of distance_ratio_c and therefore the posterior is very sensitive to the prior. Priors should therefore be set in a way that seems intuitive -> "home advantage exists but is modest, rank gap matters (how much though), distance_ratio matters very little?"
+After controlling for pair and round heterogeneity, there is very little variation left which can be uniquely attributed to distance_ratio. (prior heavily dominates the likelihood)
+
+Ideas for why the authors get such a strong estimate for distance_ratio in the paper:
+classical fixed-effects logit assumes asymptotic identification, does not penalize overparameterization, reports a single MLE even when likelihood curvature is weak
+--> it answers: "what coefficient maximizes the likelihood?" rather than "how confident should we be about this magnitude?"
+In our bayesian model, the data provide little to no evidence for a sizable effect of distance_ratio on winning probabilities given the fixed effects. Under reasonable priors, the posterior mass is concentratred near zero.
+Important: the model doesnt prove that the effect is weak! It instead says that the data do not support a strong effect of distance_ratio on winning probability.
+
+
 ```{r}
 priors_t3c5 <-c(
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 5)", class = "b", coef = "distance_ratio_c")
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c")
 )
 ```
 
 
 ```{r}
 m_t3col5 <- brm(
-  dteamwin ~ distance_ratio_c + 
+  dteamwin ~ distance_ratio_c + (1 | pair) + (1 | played) +
     dhomegame +
-    rank_gap_c +
-    factor(played),     
+    rank_gap_c,     
   data    = table3_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c5,
@@ -1634,7 +1615,269 @@ m_t3col5 <- brm(
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
+```{r}
+summary(m_t3col5)
+#pp_check(m_t3col5, ndraws = 100)
+#conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
+#plot(m_t3col5)
+```
 
 
+# Table 2 prior correction
+
+```{r}
+## Fixed-effects priors (for models with factor(player), factor(gamenu), factor(section))
+## Designed to be as close as possible in scale to the hierarchical setup.
+
+## 1) Base priors: used for columns 1–6
+priors_fixef_base <- c(
+  # same intercept prior as hierarchical cols 1–6
+  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
+  # default for all coefficients (incl. factor dummies), unless overridden below
+  set_prior("normal(0, 0.4)",   class = "b")
+)
+
+## 2) Column-specific priors: base + explicit priors for every covariate in that column
+
+### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
+priors_fixef_col1 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.04)", class = "b", coef = "plaavspeed_c")
+)
+# 
 
 
+### Column 2: add dhomegame, rank_gap_c, player_cumsections_c, player_cumsections_2_c
+priors_fixef_col2 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c")
+)
+
+### Column 3: add pre-match / lagged controls
+### dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c + player_cumsections_c + player_cumsections_2_c +
+###             scoregap_pre_c + dteamgoal_pre + dplagoal_pre + dteamred_pre + dteaminj_sec_pre +
+###             team_avespeed_pre_c + factors
+priors_fixef_col3 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+### Column 4: plus crowd & betting odds
+### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
+priors_fixef_col4 <- c(
+  priors_fixef_col3,  # all priors from col3 +
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "p_odds_draw_c")
+)
+
+### Column 5: sprint effort instead of plaavspeed_c
+### dplagoal ~ playersprints_c + same controls as col3 + factors
+priors_fixef_col5 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+### Column 6: both plaavspeed_c and playersprints_c + same controls as col5
+priors_fixef_col6 <- c(
+  priors_fixef_base,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "team_avespeed_pre_c")
+)
+
+## 3) Column 7: game-level model, wider priors like hierarchical priors_base_col7
+
+priors_fixef_base_col7 <- c(
+  set_prior("normal(-4.6, 1)", class = "Intercept"),  # more variation at game level
+  set_prior("normal(0, 0.5)", class = "b")           # all coefficients by default
+)
+
+### Column 7: goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c + factor(player) + factor(gamenu)
+priors_fixef_col7 <- c(
+  priors_fixef_base_col7,
+  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "rank_gap_c")
+)
+
+```
+
+
+# Table 2 neu
+
+## Column 1
+```{r}
+data_t2c1 <- data_base %>%
+  drop_na(dplagoal, plaavspeed) %>%
+  mutate(
+    plaavspeed_s = scale(plaavspeed)
+  )
+```
+
+```{r}
+sd(data_t2c1$plaavspeed)
+```
+
+### FE
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c1_fe <- brm(
+  dplagoal ~ plaavspeed_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  data    = data_t2c1,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c1_fe)
+
+saveRDS(m_t2c1_fe, "m_t2c1_fe.rds")
+```
+
+```{r}
+readRDS("m_t2c1_fe.rds")
+```
+
+```{r}
+0.09/1.170308
+inv_logit_scaled(0.07690283)
+```
+
+### Multilevel
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c1_ml <- brm(
+  dplagoal ~ plaavspeed_s +
+    (1 | player) +        
+    (1 | gamenu) +        
+    (1 | section),  
+  data    = data_t2c1,
+  family  = bernoulli(link = "logit"),
+  #sample_prior = "only",
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(exponential(1), class = "sd")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c1_ml)
+
+saveRDS(m_t2c1_ml, "m_t2c1_ml.rds")
+```
+
+```{r}
+# Add WAIC criterion
+m1_brms <- add_criterion(m_t2c1_fe, "waic")
+m2_brms <- add_criterion(m_t2c1_ml, "waic")
+
+# Compare models by WAIC (lower WAIC = better)
+loo_compare(m1_brms, m2_brms, criterion = "waic") %>% print( simplify = FALSE )
+```
+
+## Column 2
+```{r}
+data_t2c2 <- data_base %>%
+  drop_na(
+    dplagoal, plaavspeed,
+    dhomegame, rank_gap,
+    player_cumsections, player_cumsections_2
+  ) %>%
+  mutate(
+    plaavspeed_s           = scale(plaavspeed),
+    rank_gap_s             = scale(rank_gap),
+    player_cumsections_s   = scale(player_cumsections),
+    player_cumsections_2_s = scale(player_cumsections_2)
+  )
+```
+
+```{r}
+sd(data_t2c2$player_cumsections_2)*0.1/100
+```
+
+
+### FE
+```{r}
+#set threads for multithreading
+Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
+
+
+m_t2c2_fe <- brm(
+  dplagoal ~ plaavspeed_s +
+    dhomegame +
+    rank_gap_s +
+    player_cumsections_s + 
+    player_cumsections_2_s +
+    factor(player) +      
+    factor(gamenu) +     
+    factor(section), 
+  sample_prior = "only",
+  data    = data_t2c2,
+  family  = bernoulli(link = "logit"),
+  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
+               prior(normal(0, 0.4), class = "b"),
+               prior(normal(0, 0.04681233), class = "b", coef = "plaavspeed_s"),
+               prior(normal(0, 0.2), class = "b", coef = "dhomegame"),
+               prior(normal(0, 1.017136), class = "b", coef = "rank_gap_s"),
+               prior(normal(0, 1.076926), class = "b", coef = "player_cumsections_s"),
+               prior(normal(0, 0.1060295), class = "b", coef = "player_cumsections_2_s")),
+  iter    = 1000, warmup = 500, chains = 4, cores = 4,
+  backend = "cmdstanr",
+    threads = threading(threads = threads_per_chain)
+)
+
+pp_check(m_t2c2_fe)
+
+#saveRDS(m_t2c2_fe, "m_t2c2_fe.rds")
+```
