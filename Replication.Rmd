@@ -1791,13 +1791,17 @@ loo_compare(
   loo_t3c1,
   loo_t3c2,
  # loo_t3c3, 180 obs
- # loo_t3c4, 152 obs
+ # loo_t3c4, 152 ob
   loo_t3c5,
   loo_t3c6
 )
 
 ```
+what do the loo results tell us?
+---> If |Δelpd| < 2 × SE ---> differences are not decisive
+We evaluate model performance using approximate leave-one-out cross-validation (LOO). Since Table 3 specifications rely on different subsamples by construction, LOO comparisons are conducted only among models estimated on the same sample (N = 228).
 
+The results indicate that the specification in Column (2), which includes team and opponent distance together with home advantage and rank gap controls, yields the highest expected log predictive density. Models relying solely on distance measures or relative distance perform worse in terms of out-of-sample prediction, while differences between Columns (2) and (6) are not statistically decisive. Overall, distance-based variables add limited predictive value once pair and round heterogeneity are accounted for.
 
 
 # Table 2 prior correction
