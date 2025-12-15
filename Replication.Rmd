@@ -1563,21 +1563,12 @@ priors_t3 <- c(
 
 ```{r}
 m_t3col1_prior <- brm( 
-<<<<<<< HEAD
-  dteamwin ~ teamdist_c + oppdist_c + factor(played),
+  dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played),
   data = table3_col1, 
   family = bernoulli(link = "logit"),
   sample_prior = "only",
   prior = priors_t3,
   iter = 1000, warmup = 500, chains = 4, cores = 4 
-=======
-dteamwin ~ teamdist_c + oppdist_c + factor(played) + factor(pair),
-data = table3_col1, 
-family = bernoulli(link = "logit"),
-sample_prior = "only",
-prior = priors_t3,
-iter = 1000, warmup = 500, chains = 4, cores = 4 
->>>>>>> f70b8fff58bfa4992c2c937ac8c8c2af24ddc442
 )
 ```
 
@@ -1624,10 +1615,9 @@ priors_t3c5 <-c(
 
 ```{r}
 m_t3col5 <- brm(
-  dteamwin ~ distance_ratio_c + 
+  dteamwin ~ distance_ratio_c + (1 | pair) + (1 | played) +
     dhomegame +
-    rank_gap_c +
-    factor(played),     
+    rank_gap_c,     
   data    = table3_col1,
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c5,
@@ -1635,7 +1625,12 @@ m_t3col5 <- brm(
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
-
+```{r}
+summary(m_t3col5)
+#pp_check(m_t3col5, ndraws = 100)
+#conditional_effects(m_t3col1, spaghetti = TRUE, ndraws = 200)
+#plot(m_t3col5)
+```
 
 
 # Table 2 prior correction
