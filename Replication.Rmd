@@ -1304,28 +1304,6 @@ saveRDS(m_col6_loose, "m_col6_loose.rds")
 
 
 # Table 3
-##Intercept-only
-```{r}
-m_t3_intercept <- brm(
-  dteamwin ~ 1, 
-  data    = data_teamxgame,
-  family  = bernoulli(link = "logit"),
-  sample_prior = "only",
-  prior = prior( normal(0, 1), class = Intercept),      
-  iter    = 1000, warmup = 500, chains = 4, cores = 4
-)
-
-pp_check(m_t3_intercept)
-
-#saveRDS(m_t3_intercept, "m_t3_intercept.rds")
-
-```
-```{r}
-readRDS("m_t3_intercept.rds")
-mean(data_teamxgame$dteamwin)
-```
-Intercept estimate: -0.48 --> 38.2%
-Mean also ~38%
 
 
 ## Add Team Names for table 3
@@ -1460,6 +1438,31 @@ sapply(list(table3_col1, table3_col2, table3_col3, table3_col4, table3_col5, tab
 ```
 
 slightly different sample sizes compared to the ones from table 3 in the paper (why?)
+
+
+##Intercept-only
+```{r}
+m_t3_intercept <- brm(
+  dteamwin ~ 1, 
+  data    = data_teamxgame,
+  family  = bernoulli(link = "logit"),
+  sample_prior = "only",
+  prior = prior( normal(0, 1), class = Intercept),      
+  iter    = 1000, warmup = 500, chains = 4, cores = 4
+)
+
+pp_check(m_t3_intercept)
+
+#saveRDS(m_t3_intercept, "m_t3_intercept.rds")
+
+```
+```{r}
+readRDS("m_t3_intercept.rds")
+mean(data_teamxgame$dteamwin)
+```
+Intercept estimate: -0.48 --> 38.2%
+Mean also ~38%
+
 
 #col1
 ```{r}
