@@ -556,6 +556,7 @@ nrow(data_col7) #hier fehlen 14, verstehe nicht warum
 # (A) HIERARCHICAL priors (for models with (1 | player) etc.)
 # ============================================================
 
+priors_base <- c(
   set_prior("normal(-4.6, 0.3)", class = "Intercept"),
   set_prior("student_t(3, 0, 1)", class = "sd", group = "player",  lb = 0),
   set_prior("student_t(3, 0, 1)", class = "sd", group = "gamenu",  lb = 0),
@@ -599,39 +600,39 @@ priors_col4 <- c(
   set_prior("normal(0, 2.5)",     class = "b", coef = "p_odds_draw_c")
 )
 
-#ab hier muss noch bearbeitet werden 
+
 priors_col5 <- c(
   priors_base,
   set_prior("normal(0, 0.10)", class = "b", coef = "playersprints_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
-  set_prior("normal(0, 0.01)", class = "b", coef = "player_cumsections_2_c"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "scoregap_pre_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dteamgoal_pre"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dplagoal_pre"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dteamred_pre"),
-  set_prior("normal(0, 0.20)", class = "b", coef = "dteaminj_sec_pre"),
-  set_prior("normal(0, 0.15)", class = "b", coef = "team_avespeed_pre_c")
+  set_prior("normal(0, 0.40)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
 )
 
 priors_col6 <- c(
   priors_col5,
-  set_prior("normal(0, 0.20)", class = "b", coef = "plaavspeed_c")
+  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
 )
 
 # Base priors (Table 2, game-level: column 7)
 priors_base_col7 <- c(
-  set_prior("normal(0, 1.5)", class = "Intercept"),
+  set_prior("normal(-2.2, 0.3)", class = "Intercept"),
   set_prior("student_t(3, 0, 1)", class = "sd", group = "player", lb = 0),
   set_prior("student_t(3, 0, 1)", class = "sd", group = "gamenu", lb = 0)
 )
 
 priors_col7 <- c(
   priors_base_col7,
-  set_prior("normal(0, 0.20)", class = "b", coef = "plaavspeed_game_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.05)", class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 )
 
 
@@ -716,43 +717,43 @@ priors_fixef_col4 <- c(
 
 priors_fixef_col4 <- c(
   priors_fixef_col3,
-  set_prior("normal(0, 0.05)", class = "b", coef = "team_crowd_c"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "opp_crowd_c"),
-  set_prior("normal(0, 0.30)", class = "b", coef = "p_odds_team_c"),
-  set_prior("normal(0, 0.30)", class = "b", coef = "p_odds_draw_c")
+  set_prior("normal(0, 4.8e-05)", class = "b", coef = "team_crowd_c"),
+  set_prior("normal(0, 4.8e-05)", class = "b", coef = "opp_crowd_c"),
+  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 2.5)", class = "b", coef = "p_odds_draw_c")
 )
 
 priors_fixef_col5 <- c(
   priors_fixef_base,
   set_prior("normal(0, 0.10)", class = "b", coef = "playersprints_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.05)", class = "b", coef = "player_cumsections_c"),
-  set_prior("normal(0, 0.01)", class = "b", coef = "player_cumsections_2_c"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "scoregap_pre_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dteamgoal_pre"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dplagoal_pre"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dteamred_pre"),
-  set_prior("normal(0, 0.20)", class = "b", coef = "dteaminj_sec_pre"),
-  set_prior("normal(0, 0.15)", class = "b", coef = "team_avespeed_pre_c")
+  set_prior("normal(0, 0.40)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
+  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
+  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4))", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
 )
 
 priors_fixef_col6 <- c(
   priors_fixef_col5,
-  set_prior("normal(0, 0.20)", class = "b", coef = "plaavspeed_c")
+  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
 )
 
 # Column 7 (game-level): no "sd" priors; still include generic b for the FE dummies
 priors_fixef_base_col7 <- c(
-  set_prior("normal(0, 1.5)", class = "Intercept"),
-  set_prior("normal(0, 0.8)", class = "b")
+  set_prior("normal(-2.2, 0.3)", class = "Intercept"),
+  set_prior("normal(0, 0.5)", class = "b")
 )
 
 priors_fixef_col7 <- c(
   priors_fixef_base_col7,
-  set_prior("normal(0, 0.20)", class = "b", coef = "plaavspeed_game_c"),
-  set_prior("normal(0, 0.50)", class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.10)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.05)", class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 )
 
 ```
