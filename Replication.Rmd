@@ -28,14 +28,7 @@ library(brms)
 library(bayesplot)
 
 dir.create("ppc_prior_hier", showWarnings = FALSE)
-
 ```
-
-```{r}
-#Lourenco: Was ist das?
-#mean(is.na(data$opp_crowd)) * 100
-```
-
 
 ```{r}
 data <- read_dta("original&computed_DB_forrep.dta")
@@ -156,10 +149,6 @@ plot_ly(
 
 
 ```
-
-
-
-
 
 
   1##Prepare Data Sets
@@ -731,7 +720,7 @@ priors_fixef_col5 <- c(
   set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
   set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
   set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-  set_prior("normal(0, 0.4))", class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
   set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
   set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
   set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
@@ -763,8 +752,6 @@ threads_per_chain <- 2
 Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
 ```
 
-
-
 # PP Check Fixed effects Table 2 ---- 
 ```{r}
 m_col1_prior <- brm(
@@ -783,7 +770,6 @@ p_col1 <- pp_check(m_col1_prior, ndraws = 100)
 ggsave("col1_ppcheck.png", p_col1)
 
 saveRDS(m_col1_prior, "m_col1_prior.rds")
-
 ```
 
 ```{r}
@@ -828,7 +814,6 @@ p_col3 <- pp_check(m_col3_prior, ndraws = 100)
 ggsave("col3_ppcheck.png", p_col3)
 
 saveRDS(m_col3_prior, "m_col3_prior.rds")
-
 ```
 
 
@@ -927,9 +912,6 @@ m_col4 <- brm(
 )
 m_col4 <- add_criterion(m_col4, c("loo", "waic"))
 saveRDS(m_col4, "m_col4.rds")
-```
-
-```{r}
 
 # ---------- Column 5 ----------
 m_col5 <- brm(
@@ -981,9 +963,7 @@ m_col7 <- brm(
 )
 m_col7 <- add_criterion(m_col7, c("loo", "waic"))
 saveRDS(m_col7, "m_col7.rds")
-
 ```
-
 
 
 # PP Check Hierarchical effects Table 2 ----
@@ -1230,8 +1210,6 @@ saveRDS(m_intercept, "m_intercept.rds")
 ```
 
 
-
-
 # Looser Priors Table 2 ----
 ```{r}
 # ---- PRIOR SENSITIVITY (LOOSER PRIORS) for Table 2: Columns 1 and 6 (Fixed Effects) ----
@@ -1302,6 +1280,20 @@ saveRDS(m_col6_loose, "m_col6_loose.rds")
 ```
 
 
+
+# Summarys Table 2 ----
+```{r}
+summary(m_col1)
+summary(m_col2)
+summary(m_col3)
+summary(m_col4)
+summary(m_col5)
+summary(m_col6)
+summary(m_col7)
+summary(m_intercept)
+summary(m_col1_loose)
+summary(m_col6_loose)
+```
 
 # Table 3
 
@@ -1946,90 +1938,5 @@ priors_fixef_col7 <- c(
   set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 # We are saying playing with 13 ranks higher compared to playing with 13 ranks lower than the opponent changes the probability of winning from (0.0483 , 0.1946) so from 4.8% to 19.4%.
 )
-
-```
-
-
-
-## Table 2
-##Intercept-only model
-```{r} 
-#needed?
-m_intercept <- brm(
-  dplagoal ~ 1, 
-  data    = data_base,
-  family  = bernoulli(link = "logit"),
-  #sample_prior = "only",
-  prior = prior( normal(0, 3.5), class = Intercept),      
-  iter    = 2000, warmup = 1000, chains = 4, cores = 4
-)
-
-pp_check(m_intercept)
-summary(m_intercept)
-
-
-posterior_samples( m_intercept ) %>% 
-  transmute( alpha = inv_logit_scaled( b_Intercept )) %>% 
-  mean_qi()
-```
-
-##Preparation
-```{r}
-#needed?
-data_col1s <- data_base %>%
-  drop_na(dplagoal, plaavspeed) %>%
-  mutate(
-    plaavspeed_s = scale(plaavspeed)
-  )
-```
-
-```{r}
-#needed?
-priors_fixef_base <- c(
-  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
-  set_prior("normal(0, 0.4)",   class = "b")
-)
-
-priors_fixef_col1 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.4)", class = "b", coef = "plaavspeed_c")
-)
-```
-
-```{r}
-#needed?
-sd(data_col1s$plaavspeed)
-```
-
-```{r}
-#needed?
-#set threads for multithreading
-Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
-
-
-m_col1_s <- brm(
-  dplagoal ~ plaavspeed_s +
-    factor(player) +      
-    factor(gamenu) +     
-    factor(section), 
-  data    = data_col1s,
-  family  = bernoulli(link = "logit"),
-  #sample_prior = "only",
-  prior   = c( prior(normal(-4.6, 0.3), class = "Intercept"),
-               prior(normal(0, 0.4), class = "b"),
-               prior(normal(0, 0.4681233), class = "b", coef = "plaavspeed_s")),
-  iter    = 1000, warmup = 500, chains = 4, cores = 4,
-  backend = "cmdstanr",
-    threads = threading(threads = threads_per_chain)
-)
-saveRDS(m_col1_s, "m_col1_s_prior.rds")
-```
-
-```{r}
-#needed?
-col1s <- readRDS("m_col1_s_prior.rds")
-col1c <- readRDS("m_col1.rds")
-
-fixef(col1s) - fixef(col1c)
 
 ```
