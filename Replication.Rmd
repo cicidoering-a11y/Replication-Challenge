@@ -1242,6 +1242,9 @@ m_col1_loose <- add_criterion(m_col1_loose, c("loo", "waic"))
 saveRDS(m_col1_loose, "m_col1_loose.rds")
 
 # ---- Column 6: dplagoal ~ plaavspeed_c + playersprints_c + controls + FE ----
+
+# ---- PRIOR SENSITIVITY (LOOSER PRIORS) for Table 2: Columns 1 and 6 (Fixed Effects) ----
+
 priors_fixef_col6_loose <- c(
   priors_fixef_base_loose,
   set_prior("normal(0, 0.8)", class = "b", coef = "plaavspeed_c"),
@@ -1278,7 +1281,6 @@ m_col6_loose <- add_criterion(m_col6_loose, c("loo", "waic"))
 saveRDS(m_col6_loose, "m_col6_loose.rds")
 
 ```
-
 
 
 # Evaluation Table 2 ----
@@ -1358,44 +1360,8 @@ for (nm in names(results_prob)) {
   print(results_prob[[nm]])
 }
 
-# (optional) save results as one RDS so you don't have to rerun later
-saveRDS(results_prob, "three_vars_prob_results.rds")
-
 ```
 
-
-
-```{r}
-# comparison loo
-loo_compare(m_intercept, m_col1, m_col2)
-
-loo_compare(m_col3, m_col5, m_col6)
-
-loo_compare(m_col1, m_col1_hier)
-
-loo_compare(m_col2, m_col2_hier)
-
-loo_compare(m_col3, m_col3_hier)
-
-loo_compare(m_col4, m_col4_hier)
-
-loo_compare(m_col5, m_col5_hier)
-
-loo_compare(m_col6, m_col6_hier)
-
-loo_compare(m_col7, m_col7_hier)
-```
-
-```{r}
-# comparison r-hat
-models <- list(
-  m_intercept,
-  m_col1, m_col2, m_col3, m_col4, m_col5, m_col6, m_col7,
-  m_col1_loose, m_intercept
-)
-
-sapply(models, function(m) max(rhat(m), na.rm = TRUE))
-```
 
 ## Results Hierachical ----
 ```{r}
@@ -1488,7 +1454,6 @@ loo_compare(m_col1_hier, m_col2_hier)
 
 loo_compare(m_col3_hier, m_col5_hier, m_col6_hier)
 ```
-
 
 ```{r}
 #Comparison
