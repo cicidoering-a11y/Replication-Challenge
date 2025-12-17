@@ -1493,7 +1493,7 @@ m_t3col1 <- brm(
   dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played),
   data    = table3_col1,
   family  = bernoulli(link = "logit"),
-  prior   = priors_t3,
+  prior   = priors_t3c1,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4
 )
 ```
