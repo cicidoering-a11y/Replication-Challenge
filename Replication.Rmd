@@ -1515,8 +1515,10 @@ priors_t3c2 <- c(
 # we are saying that a team that runs 26.649 compared to a team that runs 19.426 will change the probability of winning between (0.12 , 0.72 ) so from 12% to 72%
   set_prior("normal(0, 0.0001)", class = "b", coef = "oppdist_c"),
 # we are saying that a team whose opponent runs 26.515 compared to a team that runs 20.514 will change the probability of winning between (0.15 , 0.67 ) so from 15% to 67%
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.25)",  class = "b", coef = "dhomegame"),
+#we are saying that playing a home game or not changes the base probability of winnig to be between ( 0.27, 0.505), 27% to 50%
+  set_prior("normal(0, 0.025)", class = "b", coef = "rank_gap_c")
+#We are saying that being 13 ranks above your opponent compared to being 13 ranks under changes the odd around (0.14 , 0.69) from 14% to 69%. 
 )
 ```
 
@@ -1526,28 +1528,42 @@ m_t3col2 <- brm(
     dhomegame +
     rank_gap_c,     
   data    = table3_col2,
+  sample_prior = "only",
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c2,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
-summary(m_t3col2)
+#summary(m_t3col2)
 #plot(m_t3col2)
 ```
+
+```{r}
+pp_check(m_t3col2, ndraws = 100)
+```
+
 
 
 #col3
 ```{r}
 priors_t3c3 <- c( 
-  set_prior("normal(0, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "team_crowd_c"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "opp_crowd_c"),
-  set_prior("normal(0, 0.5)", class = "b", coef = "p_odds_team_c"),
-  set_prior("normal(0, 0.5)", class = "b", coef = "p_odds_draw_c")
+  set_prior("normal(-0.48, 1.23)", class = "Intercept"), # 38% baseline chance, 95% of values will be between [0.05, 0.95], this is wider than the BO range of 6% to 77% 
+  set_prior("normal(0, 0.0001)", class = "b", coef = "teamdist_c"),
+# we are saying that a team that runs 26.649 compared to a team that runs 19.426 will change the probability of winning between (0.12 , 0.72 ) so from 12% to 72%
+  set_prior("normal(0, 0.0001)", class = "b", coef = "oppdist_c"),
+# we are saying that a team whose opponent runs 26.515 compared to a team that runs 20.514 will change the probability of winning between (0.15 , 0.67 ) so from 15% to 67%
+  set_prior("normal(0, 0.25)",  class = "b", coef = "dhomegame"),
+#we are saying that playing a home game or not changes the base probability of winnig to be between ( 0.27, 0.505), 27% to 50%
+  set_prior("normal(0, 0.025)", class = "b", coef = "rank_gap_c"),
+#We are saying that being 13 ranks above your opponent compared to being 13 ranks under changes the odd around (0.14 , 0.69) from 14% to 69%. 
+  set_prior("normal(0, 0.000025)", class = "b", coef = "team_crowd_c"),
+# We say by having a home crowd of 24357 compared to 8 the Values go from (0.15, 0,67) do 15% to 67%
+  set_prior("normal(0, 0.000025)", class = "b", coef = "opp_crowd_c"),
+# We say by having a home crowd of 24357 compared to 8 the Values go from (0.15, 0,67) do 15% to 67%
+  set_prior("normal(0, 2)", class = "b", coef = "p_odds_team_c"),
+# given the samll unit of 0.71 the effect should reflect the betting odds. If your odds are 0.77 the probability of winning will lie between (0.03 ,0.91)
+  set_prior("normal(0, 3)", class = "b", coef = "p_odds_draw_c")
+# If your probability of a draw is 0.33 compared to 0.15  the probability of winning will lie between (0.17 ,0.64) underdog or favorite.
 )
 ```
 
@@ -1565,6 +1581,7 @@ m_t3col3 <- brm(
     dhomegame +
     rank_gap_c,     
   data    = table3_col3,
+  sample_prior = "only",
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c3,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
@@ -1574,14 +1591,22 @@ summary(m_t3col3)
 #plot(m_t3col3)
 ```
 
+```{r}
+pp_check(m_t3col3, ndraws = 100)
+```
+
 #col4
 ```{r}
 priors_t3c4 <- c( 
-  set_prior("normal(0, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(-0.48, 1.23)", class = "Intercept"), # 38% baseline chance, 95% of values will be between [0.05, 0.95], this is wider than the BO range of 6% to 77% 
+  set_prior("normal(0, 0.0001)", class = "b", coef = "teamdist_c"),
+# we are saying that a team that runs 26.649 compared to a team that runs 19.426 will change the probability of winning between (0.12 , 0.72 ) so from 12% to 72%
+  set_prior("normal(0, 0.0001)", class = "b", coef = "oppdist_c"),
+# we are saying that a team whose opponent runs 26.515 compared to a team that runs 20.514 will change the probability of winning between (0.15 , 0.67 ) so from 15% to 67%
+  set_prior("normal(0, 0.25)",  class = "b", coef = "dhomegame"),
+#we are saying that playing a home game or not changes the base probability of winnig to be between ( 0.27, 0.505), 27% to 50%
+  set_prior("normal(0, 0.025)", class = "b", coef = "rank_gap_c")
+#We are saying that being 13 ranks above your opponent compared to being 13 ranks under changes the odd around (0.14 , 0.69) from 14% to 69%.
 )
 ```
 
@@ -1591,6 +1616,7 @@ m_t3col4 <- brm(
     dhomegame +
     rank_gap_c,     
   data    = table3_col4,
+  sample_prior = "only",
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c4,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
@@ -1598,6 +1624,9 @@ m_t3col4 <- brm(
 )
 summary(m_t3col4)
 #plot(m_t3col4)
+```
+```{r}
+pp_check(m_t3col4, ndraws = 100)
 ```
 
 
@@ -1632,9 +1661,13 @@ Important: the model doesnt prove that the effect is weak! It instead says that 
 
 ```{r}
 priors_t3c5 <-c(
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c") # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+  set_prior("normal(-0.48, 1.23)", class = "Intercept"), # 38% baseline chance, 95% of values will be between [0.05, 0.95], this is wider than the BO range of 6% to 77% 
+  set_prior("normal(0, 0.25)",  class = "b", coef = "dhomegame"),
+#we are saying that playing a home game or not changes the base probability of winnig to be between ( 0.27, 0.505), 27% to 50%
+  set_prior("normal(0, 0.025)", class = "b", coef = "rank_gap_c"),
+#We are saying that being 13 ranks above your opponent compared to being 13 ranks under changes the odd around (0.14 , 0.69) from 14% to 69%.
+  set_prior("normal(0, 4.25)", class = "b", coef = "distance_ratio_c") # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+# Wide weakly informative prior for our target variable. The ratio only moves by maximaly 0.28 units, so this wide prior allows the effect to be between (0.05 and 0.86) so between 5% and 86%.
 )
 ```
 
@@ -1645,11 +1678,16 @@ m_t3col5 <- brm(
     dhomegame +
     rank_gap_c,     
   data    = table3_col5,
+  #sample_prior = "only",
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c5,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
+```
+
+```{r}
+pp_check(m_t3col5, ndraws = 100)
 ```
 
 ```{r}
@@ -1667,10 +1705,15 @@ aim for weak regularization
 
 ```{r}
 priors_t3c6 <-c(
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 2)", class = "b", coef = "distance_ratio_c"),
-  set_prior("normal(0, 0.5)", class = "b", coef = "total_distance_c")
+  set_prior("normal(-0.48, 1.23)", class = "Intercept"), # 38% baseline chance, 95% of values will be between [0.05, 0.95], this is wider than the BO range of 6% to 77% 
+  set_prior("normal(0, 0.25)",  class = "b", coef = "dhomegame"),
+#we are saying that playing a home game or not changes the base probability of winnig to be between ( 0.27, 0.505), 27% to 50%
+  set_prior("normal(0, 0.025)", class = "b", coef = "rank_gap_c"),
+#We are saying that being 13 ranks above your opponent compared to being 13 ranks under changes the odd around (0.14 , 0.69) from 14% to 69%.
+  set_prior("normal(0, 4.25)", class = "b", coef = "distance_ratio_c"), # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+# Wide weakly informative prior for our target variable. The ratio only moves by maximaly 0.28 units, so this wide prior allows the effect to be between (0.05 and 0.86) so between 5% and 86%.
+  set_prior("normal(0, 0.0001)", class = "b", coef = "total_distance_c")
+# Having run 52316 compared to having run 40158 can change probability to be between (0.15, 0.67) 15% and 67%
 )
 ```
 
@@ -1680,6 +1723,7 @@ m_t3col6 <- brm(
     dhomegame +
     rank_gap_c,     
   data    = table3_col6,
+  sample_prior = "only",
   family  = bernoulli(link = "logit"),
   prior   = priors_t3c6,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
@@ -1689,6 +1733,9 @@ summary(m_t3col6)
 #plot(m_t3col6)
 ```
 
+```{r}
+pp_check(m_t3col6, ndraws = 100)
+```
 
 
 #loo evaluation for table 3
