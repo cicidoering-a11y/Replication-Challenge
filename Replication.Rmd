@@ -1419,7 +1419,6 @@ show_three_prob <- function(m) {
 # ============================================================
 
 models <- list(
-  m_intercept  = m_intercept,
   m_col1_hier       = m_col1_hier,
   m_col2_hier       = m_col2_hier,
   m_col3_hier       = m_col3_hier,
@@ -1439,7 +1438,6 @@ for (nm in names(results_prob)) {
 
 ```
 
-
 ## Comparison LOO
 ```{r}
 #Fixed effects
@@ -1450,7 +1448,7 @@ loo_compare(m_col3, m_col5, m_col6)
 
 ```{r}
 #Hierarchical effects
-loo_compare(m_col1_hier, m_col2_hier)
+loo_compare(m_intercept, m_col1_hier, m_col2_hier)
 
 loo_compare(m_col3_hier, m_col5_hier, m_col6_hier)
 ```
@@ -2140,34 +2138,33 @@ priors_fixef_col7 <- c(
 
 ```
 
+##correction col 7 (nur intern) 
 ```{r}
-show_three <- function(m) {
-  draws <- as_draws_df(m)
-  keep <- c(
-    "b_Intercept",
-    "b_plaavspeed_c",
-    "b_playersprints_c"
-  )
-  keep <- intersect(keep, variables(draws))
+draws <- posterior_samples(m_col7_hier, pars = "^b_")
 
-  summarise_draws(
-    draws[, keep, drop = FALSE],
-    mean,
-    sd,
-    ~quantile(.x, 0.025),
-    ~quantile(.x, 0.975)
-  )
-}
+# intercept on probability scale
+p0 <- plogis(draws$b_Intercept)
 
-show_three(m_intercept)
-show_three(m_col1)
-show_three(m_col2)
-show_three(m_col3)
-show_three(m_col4)
-show_three(m_col5)
-show_three(m_col6)
-show_three(m_col7)
-show_three(m_col1_loose)
-#show_three(m_col6_loose)
+# build a table: baseline p + delta p for each coefficient (+1 unit)
+out <- bind_rows(
+  tibble(
+    term = "Intercept (probability at centered covariates)",
+    mean = mean(p0),
+    sd   = sd(p0),
+    q2.5 = quantile(p0, 0.025),
+    q97.5= quantile(p0, 0.975)
+  ),
+  bind_rows(lapply(setdiff(names(draws), "b_Intercept"), function(nm) {
+    dp <- plogis(draws$b_Intercept + draws[[nm]]) - plogis(draws$b_Intercept)
+    tibble(
+      term = paste0(nm, " (Δprob for +1 unit)"),
+      mean = mean(dp),
+      sd   = sd(dp),
+      q2.5 = quantile(dp, 0.025),
+      q97.5= quantile(dp, 0.975)
+    )
+  }))
+)
 
+out
 ```
