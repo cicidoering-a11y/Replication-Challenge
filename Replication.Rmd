@@ -28,14 +28,7 @@ library(brms)
 library(bayesplot)
 
 dir.create("ppc_prior_hier", showWarnings = FALSE)
-
 ```
-
-```{r}
-#Lourenco: Was ist das?
-#mean(is.na(data$opp_crowd)) * 100
-```
-
 
 ```{r}
 data <- read_dta("original&computed_DB_forrep.dta")
@@ -156,10 +149,6 @@ plot_ly(
 
 
 ```
-
-
-
-
 
 
   1##Prepare Data Sets
@@ -763,8 +752,6 @@ threads_per_chain <- 2
 Sys.setenv(STAN_NUM_THREADS = threads_per_chain)
 ```
 
-
-
 # PP Check Fixed effects Table 2 ---- 
 ```{r}
 m_col1_prior <- brm(
@@ -930,6 +917,21 @@ saveRDS(m_col4, "m_col4.rds")
 ```
 
 ```{r}
+# ---------- Column 2 ----------
+m_col2 <- brm(
+  dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    factor(player) + factor(gamenu) + factor(section),
+  data      = data_col2,
+  family    = bernoulli(link = "logit"),
+  prior     = priors_fixef_col2,
+  backend   = "cmdstanr",
+  threads   = threading(threads_per_chain),
+  chains    = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)
+)
+m_col2 <- add_criterion(m_col2, c("loo", "waic"))
+saveRDS(m_col2, "m_col2.rds") 
 
 # ---------- Column 5 ----------
 m_col5 <- brm(
