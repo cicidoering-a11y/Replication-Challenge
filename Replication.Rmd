@@ -535,6 +535,7 @@ nrow(data_col2)
 nrow(data_col356) #unterschieded sich um 2, müsste aber eig gleich sein
 nrow(data_col4)
 nrow(data_col7) #hier fehlen 14, verstehe nicht warum
+nrow(data_base)
 ```
 
 
@@ -1206,7 +1207,6 @@ m_intercept <- brm(
 
 m_intercept <- add_criterion(m_intercept, c("loo", "waic"))
 saveRDS(m_intercept, "m_intercept.rds")
-
 ```
 
 
@@ -1281,19 +1281,253 @@ saveRDS(m_col6_loose, "m_col6_loose.rds")
 
 
 
-# Summarys Table 2 ----
+# Evaluation Table 2 ----
+## Results Fixed effects
 ```{r}
-summary(m_col1)
-summary(m_col2)
-summary(m_col3)
-summary(m_col4)
-summary(m_col5)
-summary(m_col6)
-summary(m_col7)
-summary(m_intercept)
-summary(m_col1_loose)
-summary(m_col6_loose)
+#summarize and print the results for all models in terms of probabilities
+
+inv_logit <- function(x) 1 / (1 + exp(-x))
+
+# summarise a numeric vector of draws
+summ_num <- function(x) {
+  data.frame(
+    mean  = mean(x),
+    sd    = sd(x),
+    q2.5  = unname(quantile(x, 0.025)),
+    q97.5 = unname(quantile(x, 0.975))
+  )
+}
+
+# main function: returns a small table with up to 3 rows
+# - Intercept is transformed to baseline probability p0
+# - slopes are transformed to Δp for a +1 unit change in the covariate
+show_three_prob <- function(m) {
+
+  draws <- as_draws_df(m)
+
+  out <- list()
+
+  # 1) Intercept -> baseline probability
+  alpha <- draws$b_Intercept
+  p0 <- inv_logit(alpha)
+  out[["Intercept (baseline p)"]] <- summ_num(p0)
+
+  # 2) plaavspeed_c -> change in probability for +1 unit
+  if ("b_plaavspeed_c" %in% variables(draws)) {
+    beta <- draws$b_plaavspeed_c
+    dp <- inv_logit(alpha + beta) - inv_logit(alpha)
+    out[["plaavspeed_c (Δp for +1)"]] <- summ_num(dp)
+  }
+
+  # 3) playersprints_c -> change in probability for +1 unit
+  if ("b_playersprints_c" %in% variables(draws)) {
+    beta <- draws$b_playersprints_c
+    dp <- inv_logit(alpha + beta) - inv_logit(alpha)
+    out[["playersprints_c (Δp for +1)"]] <- summ_num(dp)
+  }
+
+  # bind into one compact table
+  res <- do.call(rbind, out)
+  res$variable <- rownames(res)
+  rownames(res) <- NULL
+  res[, c("variable", "mean", "sd", "q2.5", "q97.5")]
+}
+
+# ============================================================
+# Run for all your models in one go
+# ============================================================
+
+models <- list(
+  m_intercept  = m_intercept,
+  m_col1       = m_col1,
+  m_col2       = m_col2,
+  m_col3       = m_col3,
+  m_col4       = m_col4,
+  m_col5       = m_col5,
+  m_col6       = m_col6,
+  m_col7       = m_col7,
+  m_col1_loose = m_col1_loose,
+  m_col6_loose = m_col6_loose
+)
+
+results_prob <- lapply(models, show_three_prob)
+
+# print all results
+for (nm in names(results_prob)) {
+  cat("\n====================", nm, "====================\n")
+  print(results_prob[[nm]])
+}
+
+# (optional) save results as one RDS so you don't have to rerun later
+saveRDS(results_prob, "three_vars_prob_results.rds")
+
 ```
+
+
+
+```{r}
+# comparison loo
+loo_compare(m_intercept, m_col1, m_col2)
+
+loo_compare(m_col3, m_col5, m_col6)
+
+loo_compare(m_col1, m_col1_hier)
+
+loo_compare(m_col2, m_col2_hier)
+
+loo_compare(m_col3, m_col3_hier)
+
+loo_compare(m_col4, m_col4_hier)
+
+loo_compare(m_col5, m_col5_hier)
+
+loo_compare(m_col6, m_col6_hier)
+
+loo_compare(m_col7, m_col7_hier)
+```
+
+```{r}
+# comparison r-hat
+models <- list(
+  m_intercept,
+  m_col1, m_col2, m_col3, m_col4, m_col5, m_col6, m_col7,
+  m_col1_loose, m_intercept
+)
+
+sapply(models, function(m) max(rhat(m), na.rm = TRUE))
+```
+
+## Results Hierachical ----
+```{r}
+#summarize and print the results for all models in terms of probabilities
+
+inv_logit <- function(x) 1 / (1 + exp(-x))
+
+# summarise a numeric vector of draws
+summ_num <- function(x) {
+  data.frame(
+    mean  = mean(x),
+    sd    = sd(x),
+    q2.5  = unname(quantile(x, 0.025)),
+    q97.5 = unname(quantile(x, 0.975))
+  )
+}
+
+# main function: returns a small table with up to 3 rows
+# - Intercept is transformed to baseline probability p0
+# - slopes are transformed to Δp for a +1 unit change in the covariate
+show_three_prob <- function(m) {
+
+  draws <- as_draws_df(m)
+
+  out <- list()
+
+  # 1) Intercept -> baseline probability
+  alpha <- draws$b_Intercept
+  p0 <- inv_logit(alpha)
+  out[["Intercept (baseline p)"]] <- summ_num(p0)
+
+  # 2) plaavspeed_c -> change in probability for +1 unit
+  if ("b_plaavspeed_c" %in% variables(draws)) {
+    beta <- draws$b_plaavspeed_c
+    dp <- inv_logit(alpha + beta) - inv_logit(alpha)
+    out[["plaavspeed_c (Δp for +1)"]] <- summ_num(dp)
+  }
+
+  # 3) playersprints_c -> change in probability for +1 unit
+  if ("b_playersprints_c" %in% variables(draws)) {
+    beta <- draws$b_playersprints_c
+    dp <- inv_logit(alpha + beta) - inv_logit(alpha)
+    out[["playersprints_c (Δp for +1)"]] <- summ_num(dp)
+  }
+
+  # bind into one compact table
+  res <- do.call(rbind, out)
+  res$variable <- rownames(res)
+  rownames(res) <- NULL
+  res[, c("variable", "mean", "sd", "q2.5", "q97.5")]
+}
+
+# ============================================================
+# Run for all your models in one go
+# ============================================================
+
+models <- list(
+  m_intercept  = m_intercept,
+  m_col1_hier       = m_col1_hier,
+  m_col2_hier       = m_col2_hier,
+  m_col3_hier       = m_col3_hier,
+  m_col4_hier       = m_col4_hier,
+  m_col5_hier       = m_col5_hier,
+  m_col6_hier       = m_col6_hier,
+  m_col7_hier       = m_col7_hier
+)
+
+results_prob <- lapply(models, show_three_prob)
+
+# print all results
+for (nm in names(results_prob)) {
+  cat("\n====================", nm, "====================\n")
+  print(results_prob[[nm]])
+}
+
+```
+
+
+## Comparison LOO
+```{r}
+#Fixed effects
+loo_compare(m_intercept, m_col1, m_col2)
+
+loo_compare(m_col3, m_col5, m_col6)
+```
+
+```{r}
+#Hierarchical effects
+loo_compare(m_col1_hier, m_col2_hier)
+
+loo_compare(m_col3_hier, m_col5_hier, m_col6_hier)
+```
+
+
+```{r}
+#Comparison
+loo_compare(m_col1, m_col1_hier)
+
+loo_compare(m_col2, m_col2_hier)
+
+loo_compare(m_col3, m_col3_hier)
+
+loo_compare(m_col4, m_col4_hier)
+
+loo_compare(m_col5, m_col5_hier)
+
+loo_compare(m_col6, m_col6_hier)
+
+loo_compare(m_col7, m_col7_hier)
+```
+
+## Evaluation R-hat
+```{r}
+# evaluation r-hat fixed effects
+models <- list(
+  m_intercept,
+  m_col1, m_col2, m_col3, m_col4, m_col5, m_col6, m_col7,
+  m_col1_loose, m_col6_loose, m_intercept
+)
+
+sapply(models, function(m) max(rhat(m), na.rm = TRUE))
+```
+
+```{r}
+# evaluation r-hat hierachical
+models <- list(
+  m_col1_hier, m_col2_hier, m_col3_hier, m_col4_hier, m_col5_hier, m_col6_hier, m_col7_hier
+)
+
+sapply(models, function(m) max(rhat(m), na.rm = TRUE))
+```
+
 
 # Table 3
 
@@ -1962,5 +2196,37 @@ priors_fixef_col7 <- c(
   set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 # We are saying playing with 13 ranks higher compared to playing with 13 ranks lower than the opponent changes the probability of winning from (0.0483 , 0.1946) so from 4.8% to 19.4%.
 )
+
+```
+
+```{r}
+show_three <- function(m) {
+  draws <- as_draws_df(m)
+  keep <- c(
+    "b_Intercept",
+    "b_plaavspeed_c",
+    "b_playersprints_c"
+  )
+  keep <- intersect(keep, variables(draws))
+
+  summarise_draws(
+    draws[, keep, drop = FALSE],
+    mean,
+    sd,
+    ~quantile(.x, 0.025),
+    ~quantile(.x, 0.975)
+  )
+}
+
+show_three(m_intercept)
+show_three(m_col1)
+show_three(m_col2)
+show_three(m_col3)
+show_three(m_col4)
+show_three(m_col5)
+show_three(m_col6)
+show_three(m_col7)
+show_three(m_col1_loose)
+#show_three(m_col6_loose)
 
 ```
