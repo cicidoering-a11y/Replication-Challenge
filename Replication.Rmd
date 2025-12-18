@@ -1938,6 +1938,104 @@ The results indicate that the specification in Column (2), which includes team a
 
 
 
+# table 3: multicollinearity plot
+```{r}
+library(dplyr)
+library(plotly)
+
+df <- table3_col4 %>%
+  select(dteamwin, teamdist_game, oppdist_game) %>%
+  filter(
+    !is.na(dteamwin),
+    !is.na(teamdist_game),
+    !is.na(oppdist_game)
+  ) %>%
+  mutate(
+    win_prob = dteamwin  # 0/1, damit es als “Probability” auf der z-Achse steht
+  )
+
+plot_ly(
+  df,
+  x = ~teamdist_game,
+  y = ~oppdist_game,
+  z = ~win_prob,
+  type = "scatter3d",
+  mode = "markers",
+  marker = list(size = 2),
+  text = ~paste0(
+    "teamdist=", round(teamdist_game, 1),
+    "<br>oppdist=", round(oppdist_game, 1),
+    "<br>dteamwin=", dteamwin
+  ),
+  hoverinfo = "text"
+) %>%
+  layout(
+    scene = list(
+      xaxis = list(title = "teamdist_game"),
+      yaxis = list(title = "oppdist_game"),
+      zaxis = list(title = "dteamwin (0/1)")
+    ),
+    title = "3D Scatter: TeamDist × OppDist → dteamwin"
+  )
+
+
+library(brms)
+library(tidyverse)
+
+# m_t3c4 = your fitted brms model that used priors_t3c4
+post <- as_draws_df(m_t3col4) %>%
+  select(b_teamdist_c, b_oppdist_c)
+
+ggplot(post, aes(x = b_teamdist_c, y = b_oppdist_c)) +
+  geom_point(alpha = 0.12, size = 0.8) +
+  geom_density_2d() +
+  labs(
+    title = "Posterior ridge: teamdist_c vs oppdist_c",
+    x = expression(beta[teamdist_c]),
+    y = expression(beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+ols <- lm(dteamwin ~ teamdist_c + oppdist_c + dhomegame + rank_gap_c,
+          data = table3_col4)
+
+ols_pt <- tibble(
+  b_teamdist_c = coef(ols)[["teamdist_c"]],
+  b_oppdist_c  = coef(ols)[["oppdist_c"]]
+)
+
+ggplot(post, aes(x = b_teamdist_c, y = b_oppdist_c)) +
+  geom_point(alpha = 0.12, size = 0.8) +
+  geom_density_2d() +
+  geom_point(data = ols_pt, aes(x = b_teamdist_c, y = b_oppdist_c),
+             size = 4) +
+  labs(
+    title = "Posterior ridge with OLS point",
+    x = expression(beta[teamdist_c]),
+    y = expression(beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+
+post %>%
+  mutate(beta_diff = b_teamdist_c - b_oppdist_c) %>%
+  ggplot(aes(x = beta_diff)) +
+  geom_density(fill = "grey80") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Identified effect direction",
+    x = expression(beta[teamdist_c] - beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+
+
+
+
+```
+
+
+
 # Ich glaube ab hier wird nicht mehr beötigt ----
 ## LD Table 2 priors
 
