@@ -1650,7 +1650,10 @@ Mean also ~38%
 priors_t3c1 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"), 
   set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c")
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  # Multilevel regularization
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1662,7 +1665,7 @@ m_t3col1_prior <- brm(
   family = bernoulli(link = "logit"),
   #sample_prior = "only",
   prior = priors_t3c1,
-  iter = 1000, warmup = 500, chains = 4, cores = 4,
+  iter = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
@@ -1703,10 +1706,12 @@ is multicollinearity causing problems here in col1?
 ```{r}
 priors_t3c2 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
+  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),#any prior will yield point estimates of 0
+  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"), #any prior will yield point estimates of 0
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1742,8 +1747,10 @@ priors_t3c3 <- c(
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"), 
   set_prior("normal(0, 0.3)", class = "b", coef = "team_crowd_c"),
   set_prior("normal(0, 0.3)", class = "b", coef = "opp_crowd_c"),
-  set_prior("normal(0, 2)", class = "b", coef = "p_odds_team_c"),
-  set_prior("normal(0, 3)", class = "b", coef = "p_odds_draw_c")
+  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_draw_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1768,7 +1775,7 @@ m_t3col3 <- brm(
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 summary(m_t3col3)
-#plot(m_t3col3)
+plot(m_t3col3)
 ```
 
 ```{r}
@@ -1782,7 +1789,9 @@ priors_t3c4 <- c(
   set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
   set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1840,7 +1849,9 @@ priors_t3c5 <-c(
   set_prior("normal(-0.4, 1)", class = "Intercept"),  
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "distance_ratio_c") # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+  set_prior("normal(0, 1)", class = "b", coef = "distance_ratio_c"), # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1882,7 +1893,9 @@ priors_t3c6 <-c(
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
   set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "total_distance_c")
+  set_prior("normal(0, 1)", class = "b", coef = "total_distance_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
