@@ -241,23 +241,7 @@ data %>%
 
 Define missing variable
 
-```{r}
-data_base <- data_base %>%
-  mutate(
-    SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
-                  dplagoal,                      # already 0/1 if player scored
-                  NA)                            # set others to NA
-  )
-```
 
-```{r}
-# unique combinations of team and games
-TG_combinations <- data_base %>%
-  distinct(team, gamenu) %>%
-  nrow()
-
-TG_combinations
-```
 
 ```{r}
 team_game_redcards <- data_base %>%
@@ -271,6 +255,19 @@ team_game_redcards <- data_base %>%
 
 ```{r}
 mean(data$dfullsection, na.rm = TRUE)
+```
+
+```{r}
+data_PA <- data %>%
+  filter(
+    dfullsection == 1,               # full sections only
+    !(section %in% c(10, 20))) %>%   # no overtime sections
+  mutate(
+    SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
+                  dplagoal,                      # already 0/1 if player scored
+                  NA))
+
+
 ```
 
 
@@ -288,7 +285,7 @@ panelA_vars <- list(
   team_distance                = "teamdist"
 )
 
-panelA <- data_base %>% 
+panelA <- data_PA %>% 
   summarise(
     FullSections_mean     = mean(data$dfullsection, na.rm = TRUE),
     Overtime_mean         = round(mean(data$section %in% c(10, 20)),2),
@@ -298,10 +295,11 @@ panelA <- data_base %>%
     PlayerSprints_sd      = sd(playersprints, na.rm = TRUE),
     GoalProb_mean         = mean(SMGP, na.rm = TRUE),
     GoalProb_sd           = sd(SMGP, na.rm = TRUE),
-    TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
-    TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
+    TeamDistance_mean     = data %>% filter(!(section %in% c(10, 20))) %>% summarise(mean(teamdist, na.rm = TRUE)) %>% pull(),
+    TeamDistance_sd       = data %>% filter(!(section %in% c(10, 20))) %>% summarise(sd(teamdist, na.rm = TRUE)) %>% pull(),
     Observations_PS       = nrow(data),
-    Observations_TS       = TG_combinations*20         
+    Observations_TS       = data %>% distinct(team, gamenu) %>% nrow()*20   # unique combinations of team and games      
+
   )
 
 options(scipen = 999)
