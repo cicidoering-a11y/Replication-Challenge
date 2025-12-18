@@ -301,7 +301,7 @@ panelA <- data_base %>%
     TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
     TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
     Observations_PS       = nrow(data),
-    Observations_TS       = TG_combinations*20         #18 oder 20?
+    Observations_TS       = TG_combinations*20         
   )
 
 options(scipen = 999)
@@ -316,9 +316,7 @@ panelA <- panelA %>%
 
 ```{r}
 
-
 dataB <- data %>%
-  filter(dfullsection == 1 & !(section %in% c(10))) %>%
   group_by(gamenu, player) %>%
   summarise(
     player_sectionsplayed = first(player_sectionsplayed),  
@@ -326,8 +324,7 @@ dataB <- data %>%
     .groups = "drop"
   )
 
-dataB2 <- data %>%
-  filter(dfullsection == 1 & !(section %in% c(10))) %>%
+teamdistance <- data %>%
   group_by(gamenu, team) %>%
   summarise(
     teamdist_game = mean(teamdist_game, na.rm = TRUE)
@@ -348,8 +345,6 @@ redcard <- data %>%
     .groups = "drop"
   )
 
-
-
 ```
 
 
@@ -365,17 +360,15 @@ panelB <- data %>%
     SectionsPlayed_sd     = sd(dataB$player_sectionsplayed, na.rm = TRUE),
     AvgSpeed_mean         = mean(dataB$player_avg_speed, na.rm = TRUE),
     AvgSpeed_sd           = sd(dataB$player_avg_speed, na.rm = TRUE),
-    TeamDistanceGame_mean = mean(dataB2$teamdist_game, na.rm = TRUE),
-    TeamDistanceGame_sd   = sd(dataB2$teamdist_game, na.rm = TRUE),
+    TeamDistanceGame_mean = mean(teamdistance$teamdist_game, na.rm = TRUE),
+    TeamDistanceGame_sd   = sd(teamdistance$teamdist_game, na.rm = TRUE),
     HomeCrowd_mean        = mean(crowd_game$home_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     HomeCrowd_sd          = sd(crowd_game$home_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     AwayCrowd_mean        = mean(crowd_game$opp_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     AwayCrowd_sd          = sd(crowd_game$opp_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     RedCardProb_mean      = mean(redcard$any_red, na.rm = TRUE),
     RedCardProb_sd        = sd(redcard$any_red, na.rm = TRUE),
-    Obs_player_game       = data %>% 
-      filter(dfullsection == 1 & !(section %in% c(10))) %>%
-      distinct(gamenu, player) %>% nrow(),
+    Obs_player_game       = data %>% distinct(gamenu, player) %>% nrow(),
     Obs_team_game         = n_distinct(team, gamenu),
     
     Rounds                = n_distinct(played),
