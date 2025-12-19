@@ -184,16 +184,24 @@ ggdag( dag1 ) +
 dag2 <- dagitty("dag{
                 D -> W
                 OD -> W
-                }")
+                D -> R
+                OD -> R
+                D -> T
+                OD -> T
+                R -> W
+                T -> W
+                E -> D
+                OE -> OD}")
 
 coordinates(dag2) <- list( 
-                          x = c(D = 0, OD = 2, W = 1) , 
-                          y = c(D = 0, OD = 0, W = 0))
+                          x = c(D = 0, OD = 2, W = 1, R = 1, "T" = 1, E = -1, OE = 3) , 
+                          y = c(D = 1, OD = 1, W = 1, R = 2, "T" = 0, E = 1, OE = 1))
 
 ggdag( dag2 ) + 
-  ggtitle( "(1) Team Distance influences Team Winning Probability;\n(2) Opponent Distance influences Team Winning Probability" ) +
+  ggtitle( "(1) Teams Effort influences Team Distance;\n(2) Opponents Effort influences Opponents Distance;\n(3) Team Distance influences Team Winning Probability;\n(4) Opponent Distance influences Team Winning Probability;\n(5) Team Distance and Opponents Distance influence the Distance Ratio and the Total Distance" ) +
   theme_dag()
 ```
+
 ```{r}
 library(fixest)
 
@@ -210,52 +218,41 @@ etable(reg1, reg2, reg3, reg4)
 data %>%
   ggplot(aes(x=playersprints, y=plaavspeed)) +
   geom_point() +
-  geom_smooth(method = "lm", se = TRUE) +
-  theme_classic()
-
-data %>%
-  ggplot(aes(x=teamdist_game, y = oppdist_game)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = T) +
+  geom_smooth(method = "lm", se = TRUE, color = "steelblue") +
+  labs(x = "Number of Sprints",
+       y = "Speed (km/h)") +
   theme_classic()
 
 
 data %>%
   ggplot(aes(x=dplagoal)) +
-  geom_histogram() +
+  geom_histogram(fill = "steelblue", binwidth = 0.1) +
+  labs(x = "Goal Probability",
+        y = "Count") +
   theme_classic()
 
 
 data %>%
   ggplot(aes(x=dteamwin)) +
-  geom_histogram() +
+  geom_histogram(fill = "steelblue", binwidth = 0.1) +
+  labs(x = "Team Winning Probability",
+        y = "Count") +
+  theme_classic()
+
+
+data %>%
+  ggplot(aes(x=p_odds_team, y = dteamwin)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T, color = "steelblue") +
+  labs(x = "BO Team Win",
+       y = "Team Winning Probability") +
   theme_classic()
 ```
-
-
 
 
 ## Summary Statistics
 
 Define missing variable
-
-```{r}
-data_base <- data_base %>%
-  mutate(
-    SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
-                  dplagoal,                      # already 0/1 if player scored
-                  NA)                            # set others to NA
-  )
-```
-
-```{r}
-# unique combinations of team and games
-TG_combinations <- data_base %>%
-  distinct(team, gamenu) %>%
-  nrow()
-
-TG_combinations
-```
 
 ```{r}
 team_game_redcards <- data_base %>%
@@ -269,6 +266,18 @@ team_game_redcards <- data_base %>%
 
 ```{r}
 mean(data$dfullsection, na.rm = TRUE)
+```
+
+```{r}
+data_PA <- data %>%
+  filter(
+    dfullsection == 1,               # full sections only
+    !(section %in% c(10, 20))) %>%   # no overtime sections
+  mutate(
+    SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
+                  dplagoal,                      # already 0/1 if player scored
+                  NA))
+
 ```
 
 
@@ -286,7 +295,7 @@ panelA_vars <- list(
   team_distance                = "teamdist"
 )
 
-panelA <- data_base %>% 
+panelA <- data_PA %>% 
   summarise(
     FullSections_mean     = mean(data$dfullsection, na.rm = TRUE),
     Overtime_mean         = round(mean(data$section %in% c(10, 20)),2),
@@ -296,10 +305,11 @@ panelA <- data_base %>%
     PlayerSprints_sd      = sd(playersprints, na.rm = TRUE),
     GoalProb_mean         = mean(SMGP, na.rm = TRUE),
     GoalProb_sd           = sd(SMGP, na.rm = TRUE),
-    TeamDistance_mean     = mean(teamdist, na.rm = TRUE),
-    TeamDistance_sd       = sd(teamdist, na.rm = TRUE),
+    TeamDistance_mean     = data %>% filter(!(section %in% c(10, 20))) %>% summarise(mean(teamdist, na.rm = TRUE)) %>% pull(),
+    TeamDistance_sd       = data %>% filter(!(section %in% c(10, 20))) %>% summarise(sd(teamdist, na.rm = TRUE)) %>% pull(),
     Observations_PS       = nrow(data),
-    Observations_TS       = TG_combinations*20         #18 oder 20?
+    Observations_TS       = data %>% distinct(team, gamenu) %>% nrow()*20   # unique combinations of team and games      
+
   )
 
 options(scipen = 999)
@@ -314,9 +324,7 @@ panelA <- panelA %>%
 
 ```{r}
 
-
 dataB <- data %>%
-  filter(dfullsection == 1 & !(section %in% c(10))) %>%
   group_by(gamenu, player) %>%
   summarise(
     player_sectionsplayed = first(player_sectionsplayed),  
@@ -324,8 +332,7 @@ dataB <- data %>%
     .groups = "drop"
   )
 
-dataB2 <- data %>%
-  filter(dfullsection == 1 & !(section %in% c(10))) %>%
+teamdistance <- data %>%
   group_by(gamenu, team) %>%
   summarise(
     teamdist_game = mean(teamdist_game, na.rm = TRUE)
@@ -346,8 +353,6 @@ redcard <- data %>%
     .groups = "drop"
   )
 
-
-
 ```
 
 
@@ -363,17 +368,19 @@ panelB <- data %>%
     SectionsPlayed_sd     = sd(dataB$player_sectionsplayed, na.rm = TRUE),
     AvgSpeed_mean         = mean(dataB$player_avg_speed, na.rm = TRUE),
     AvgSpeed_sd           = sd(dataB$player_avg_speed, na.rm = TRUE),
-    TeamDistanceGame_mean = mean(dataB2$teamdist_game, na.rm = TRUE),
-    TeamDistanceGame_sd   = sd(dataB2$teamdist_game, na.rm = TRUE),
+    WinningProb_mean      = mean(data$dteamwin),
+    WinningProb_sd        = sd(data$dteamwin),
+    TeamDistanceGame_mean = mean(teamdistance$teamdist_game, na.rm = TRUE),
+    TeamDistanceGame_sd   = sd(teamdistance$teamdist_game, na.rm = TRUE),
     HomeCrowd_mean        = mean(crowd_game$home_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     HomeCrowd_sd          = sd(crowd_game$home_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     AwayCrowd_mean        = mean(crowd_game$opp_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     AwayCrowd_sd          = sd(crowd_game$opp_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     RedCardProb_mean      = mean(redcard$any_red, na.rm = TRUE),
     RedCardProb_sd        = sd(redcard$any_red, na.rm = TRUE),
-    Obs_player_game       = data %>% 
-      filter(dfullsection == 1 & !(section %in% c(10))) %>%
-      distinct(gamenu, player) %>% nrow(),
+    BO_mean               = mean(data$p_odds_team, na.rm = T),
+    BO_sd                 = sd(data$p_odds_team, na.rm = T),
+    Obs_player_game       = data %>% distinct(gamenu, player) %>% nrow(),
     Obs_team_game         = n_distinct(team, gamenu),
     
     Rounds                = n_distinct(played),
@@ -1574,8 +1581,8 @@ data <- data %>%
 data_teamxgame <- data %>% 
   group_by(gamenu, team, opponent) %>%  # we keep opponent to include pair fixed effects
   summarise(
-    teamdist_game = sum(teamdist_game, na.rm = TRUE),
-    oppdist_game  = sum(oppdist_game,  na.rm = TRUE),
+    teamdist_game = unique(teamdist_game),
+    oppdist_game  = unique(oppdist_game),
     dteamwin      = unique(dteamwin),     # same for all players on team
     team_crowd        = unique(team_crowd),
     opp_crowd         = unique(opp_crowd),
@@ -1609,7 +1616,7 @@ data_teamxgame <- data_teamxgame %>%
     team_high = pmax(team, opponent),
     pair = paste0(team_low, "_", team_high)
   )
-#we have 14 teams, 14 over 2 = 91 possible matchups,verify below
+# we have 14 teams, 14 over 2 = 91 possible matchups, verify below
 length(unique(data_teamxgame$pair))
 ```
 
@@ -1689,8 +1696,11 @@ Mean also ~38%
 #set weakly informative priors that fit logit scale 
 priors_t3c1 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"), 
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c")
+  set_prior("normal(0, 0.5)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "oppdist_c"),
+  # Multilevel regularization
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1700,9 +1710,9 @@ m_t3col1_prior <- brm(
   dteamwin ~ teamdist_c + oppdist_c + (1 | pair) + (1 | played),
   data = table3_col1, 
   family = bernoulli(link = "logit"),
-  #sample_prior = "only",
+  sample_prior = "only",
   prior = priors_t3c1,
-  iter = 1000, warmup = 500, chains = 4, cores = 4,
+  iter = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
 ```
@@ -1723,6 +1733,7 @@ m_t3col1 <- brm(
   prior   = priors_t3c1,
   iter    = 4000, warmup = 2000, chains = 4, cores = 4
 )
+print(summary(m_t3col1), digits = 6)
 ```
 
 ```{r}
@@ -1735,7 +1746,7 @@ plot(m_t3col1)
 ```{r}
 cor(table3_col1 %>% select(teamdist_c, oppdist_c, distance_ratio_c, total_distance_c), use = "pairwise.complete.obs")
 ```
-is multicollinearity causing problems here in col1?
+
 
 
 
@@ -1743,10 +1754,12 @@ is multicollinearity causing problems here in col1?
 ```{r}
 priors_t3c2 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.5)", class = "b", coef = "teamdist_c"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "oppdist_c"), 
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),#reasonable prior (expect small effects), otherwise set sd=1 if we expect stronger effects 
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1762,7 +1775,8 @@ m_t3col2 <- brm(
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
-summary(m_t3col2)
+print(summary(m_t3col2), digits = 6)
+#summary(m_t3col2)
 #plot(m_t3col2)
 ```
 
@@ -1776,14 +1790,16 @@ pp_check(m_t3col2, ndraws = 100)
 ```{r}
 priors_t3c3 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"), 
-  set_prior("normal(0, 0.3)", class = "b", coef = "team_crowd_c"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "opp_crowd_c"),
-  set_prior("normal(0, 2)", class = "b", coef = "p_odds_team_c"),
-  set_prior("normal(0, 3)", class = "b", coef = "p_odds_draw_c")
+  set_prior("normal(0, 0.5)", class = "b", coef = "teamdist_c"),     #fix
+  set_prior("normal(0, 0.5)", class = "b", coef = "oppdist_c"),      #fix
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),     #fix
+  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),     #fix
+  set_prior("normal(0, 0.5)", class = "b", coef = "team_crowd_c"),   #fix
+  set_prior("normal(0, 0.5)", class = "b", coef = "opp_crowd_c"),    #fix
+  set_prior("normal(0, 1)", class = "b", coef = "p_odds_team_c"),  #VERY prior sensitive
+  set_prior("normal(0, 1)", class = "b", coef = "p_odds_draw_c"),  #VERY prior sensitive
+  set_prior("exponential(1)", class = "sd", group = "pair"),         #fix
+  set_prior("exponential(1)", class = "sd", group = "played")        #fix
 )
 ```
 
@@ -1807,7 +1823,7 @@ m_t3col3 <- brm(
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
-summary(m_t3col3)
+print(summary(m_t3col3), digits = 6)
 #plot(m_t3col3)
 ```
 
@@ -1819,10 +1835,12 @@ pp_check(m_t3col3, ndraws = 100)
 ```{r}
 priors_t3c4 <- c( 
   set_prior("normal(-0.4, 1)", class = "Intercept"),
-  set_prior("normal(0, 1)", class = "b", coef = "teamdist_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "oppdist_c"),
-  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
-  set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c")
+  set_prior("normal(0, 0.5)", class = "b", coef = "teamdist_c"), #priors fix
+  set_prior("normal(0, 0.5)", class = "b", coef = "oppdist_c"),  #fix
+  set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"), #fix
+  set_prior("normal(0, 0.5)", class = "b", coef = "rank_gap_c"), #fix
+  set_prior("exponential(1)", class = "sd", group = "pair"),     #fix
+  set_prior("exponential(1)", class = "sd", group = "played")    #fix
 )
 ```
 
@@ -1838,13 +1856,12 @@ m_t3col4 <- brm(
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
-summary(m_t3col4)
+print(summary(m_t3col4), digits = 6)
 #plot(m_t3col4)
 ```
 ```{r}
 pp_check(m_t3col4, ndraws = 100)
 ```
-
 
 
 #col5
@@ -1853,26 +1870,6 @@ below we impose reasonably skeptical priors. What the priors say:
 Distance ratio matters, but not absurdly.
 Home advantage is modest.
 Rank gap matters a little, but not too much.
-If distance_ratio_c large ->data-driven
-If it shrinks strongly ->prior-sensitive result
-Regression Coefficients:
-                 Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept           -0.77      0.24    -1.26    -0.29 1.00    10422     5941
-distance_ratio_c     0.01      0.10    -0.18     0.20 1.00    16599     5784
-dhomegame            0.29      0.26    -0.23     0.81 1.00    16276     6145
-rank_gap_c          -0.18      0.04    -0.26    -0.11 1.00    10318     5311
-
---> given reasonable skepticism, the data do not strongly identify a positive causal effect of relative distance
---> When estimating a game-level win probability with pair and round effects, the effect of relative running distance is highly sensitive to modeling assumptions. Under weakly informative priors and partial pooling, the posterior mass concentrates near zero, indicating limited identifying variation once unobserved heterogeneity is accounted for.
-
-If we set our priors such that we allow/expect huge effects (set_prior("normal(0, 3)", class = "b", coef = "distance_ratio_c"), we can produce point estimates for distance_ratio_c similar to those in the paper (and *** significance level). This indicates that the data are weakly informative about the effect of distance_ratio_c and therefore the posterior is very sensitive to the prior. Priors should therefore be set in a way that seems intuitive -> "home advantage exists but is modest, rank gap matters (how much though), distance_ratio matters very little?"
-After controlling for pair and round heterogeneity, there is very little variation left which can be uniquely attributed to distance_ratio. (prior heavily dominates the likelihood)
-
-Ideas for why the authors get such a strong estimate for distance_ratio in the paper:
-classical fixed-effects logit assumes asymptotic identification, does not penalize overparameterization, reports a single MLE even when likelihood curvature is weak
---> it answers: "what coefficient maximizes the likelihood?" rather than "how confident should we be about this magnitude?"
-In our bayesian model, the data provide little to no evidence for a sizable effect of distance_ratio on winning probabilities given the fixed effects. Under reasonable priors, the posterior mass is concentratred near zero.
-Important: the model doesnt prove that the effect is weak! It instead says that the data do not support a strong effect of distance_ratio on winning probability.
 
 
 ```{r}
@@ -1880,7 +1877,9 @@ priors_t3c5 <-c(
   set_prior("normal(-0.4, 1)", class = "Intercept"),  
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "distance_ratio_c") # wider priors (normal 0, 2-3) produce results close to paper, otherwise effect is shrunk towards zero
+  set_prior("normal(0, 2)", class = "b", coef = "distance_ratio_c"), #very prior sensitive
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1897,6 +1896,7 @@ m_t3col5 <- brm(
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
+print(summary(m_t3col5), digits = 6)
 ```
 
 ```{r}
@@ -1918,11 +1918,13 @@ aim for weak regularization
 
 ```{r}
 priors_t3c6 <-c(
-  set_prior("normal(-0.4, 1)", class = "Intercept"),
+   set_prior("normal(-0.4, 1)", class = "Intercept"),  
   set_prior("normal(0, 0.5)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.3)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.1)", class = "b", coef = "distance_ratio_c"),
-  set_prior("normal(0, 1)", class = "b", coef = "total_distance_c")
+  set_prior("normal(0, 2)", class = "b", coef = "distance_ratio_c"), #very prior sensitive
+  set_prior("normal(0, 5)", class = "b", coef = "total_distance_c"),
+  set_prior("exponential(1)", class = "sd", group = "pair"),
+  set_prior("exponential(1)", class = "sd", group = "played")
 )
 ```
 
@@ -1938,7 +1940,7 @@ m_t3col6 <- brm(
   iter    = 4000, warmup = 2000, chains = 4, cores = 4,
   control = list(max_treedepth = 15, adapt_delta = 0.95) #increase treedepth to avoid problems during warmup
 )
-summary(m_t3col6)
+print(summary(m_t3col6), digits = 6)
 #plot(m_t3col6)
 ```
 
