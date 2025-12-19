@@ -191,14 +191,16 @@ dag2 <- dagitty("dag{
                 D -> T
                 OD -> T
                 R -> W
-                T -> W}")
+                T -> W
+                E -> D
+                OE -> OD}")
 
 coordinates(dag2) <- list( 
-                          x = c(D = 0, OD = 2, W = 1, R = 1, "T" = 1) , 
-                          y = c(D = 1, OD = 1, W = 1, R = 2, "T" = 0))
+                          x = c(D = 0, OD = 2, W = 1, R = 1, "T" = 1, E = -1, OE = 3) , 
+                          y = c(D = 1, OD = 1, W = 1, R = 2, "T" = 0, E = 1, OE = 1))
 
 ggdag( dag2 ) + 
-  ggtitle( "(1) Team Distance influences Team Winning Probability;\n(2) Opponent Distance influences Team Winning Probability;\n(3) Team Distance and Opponents Distance influence the Distance Ratio and the Total Distance" ) +
+  ggtitle( "(1) Teams Effort influences Team Distance;\n(2) Opponents Effort influences Opponents Distance;\n(3) Team Distance influences Team Winning Probability;\n(4) Opponent Distance influences Team Winning Probability;\n(5) Team Distance and Opponents Distance influence the Distance Ratio and the Total Distance" ) +
   theme_dag()
 ```
 
@@ -250,12 +252,9 @@ data %>%
 ```
 
 
-
 ## Summary Statistics
 
 Define missing variable
-
-
 
 ```{r}
 team_game_redcards <- data_base %>%
@@ -280,7 +279,6 @@ data_PA <- data %>%
     SMGP = ifelse(position %in% c(3,4),          # SMGP = Strikers and midfielders goal probability
                   dplagoal,                      # already 0/1 if player scored
                   NA))
-
 
 ```
 
