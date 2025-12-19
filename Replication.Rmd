@@ -186,16 +186,22 @@ ggdag( dag1 ) +
 dag2 <- dagitty("dag{
                 D -> W
                 OD -> W
-                }")
+                D -> R
+                OD -> R
+                D -> T
+                OD -> T
+                R -> W
+                T -> W}")
 
 coordinates(dag2) <- list( 
-                          x = c(D = 0, OD = 2, W = 1) , 
-                          y = c(D = 0, OD = 0, W = 0))
+                          x = c(D = 0, OD = 2, W = 1, R = 1, "T" = 1) , 
+                          y = c(D = 1, OD = 1, W = 1, R = 2, "T" = 0))
 
 ggdag( dag2 ) + 
-  ggtitle( "(1) Team Distance influences Team Winning Probability;\n(2) Opponent Distance influences Team Winning Probability" ) +
+  ggtitle( "(1) Team Distance influences Team Winning Probability;\n(2) Opponent Distance influences Team Winning Probability;\n(3) Team Distance and Opponents Distance influence the Distance Ratio and the Total Distance" ) +
   theme_dag()
 ```
+
 ```{r}
 library(fixest)
 
@@ -212,28 +218,36 @@ etable(reg1, reg2, reg3, reg4)
 data %>%
   ggplot(aes(x=playersprints, y=plaavspeed)) +
   geom_point() +
-  geom_smooth(method = "lm", se = TRUE) +
-  theme_classic()
-
-data %>%
-  ggplot(aes(x=teamdist_game, y = oppdist_game)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = T) +
+  geom_smooth(method = "lm", se = TRUE, color = "steelblue") +
+  labs(x = "Number of Sprints",
+       y = "Speed (km/h)") +
   theme_classic()
 
 
 data %>%
   ggplot(aes(x=dplagoal)) +
-  geom_histogram() +
+  geom_histogram(fill = "steelblue", binwidth = 0.1) +
+  labs(x = "Goal Probability",
+        y = "Count") +
   theme_classic()
 
 
 data %>%
   ggplot(aes(x=dteamwin)) +
-  geom_histogram() +
+  geom_histogram(fill = "steelblue", binwidth = 0.1) +
+  labs(x = "Team Winning Probability",
+        y = "Count") +
+  theme_classic()
+
+
+data %>%
+  ggplot(aes(x=p_odds_team, y = dteamwin)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T, color = "steelblue") +
+  labs(x = "BO Team Win",
+       y = "Team Winning Probability") +
   theme_classic()
 ```
-
 
 
 
@@ -358,6 +372,8 @@ panelB <- data %>%
     SectionsPlayed_sd     = sd(dataB$player_sectionsplayed, na.rm = TRUE),
     AvgSpeed_mean         = mean(dataB$player_avg_speed, na.rm = TRUE),
     AvgSpeed_sd           = sd(dataB$player_avg_speed, na.rm = TRUE),
+    WinningProb_mean      = mean(data$dteamwin),
+    WinningProb_sd        = sd(data$dteamwin),
     TeamDistanceGame_mean = mean(teamdistance$teamdist_game, na.rm = TRUE),
     TeamDistanceGame_sd   = sd(teamdistance$teamdist_game, na.rm = TRUE),
     HomeCrowd_mean        = mean(crowd_game$home_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
@@ -366,6 +382,8 @@ panelB <- data %>%
     AwayCrowd_sd          = sd(crowd_game$opp_crowd[crowd_game$dhomegame == 1], na.rm = TRUE),
     RedCardProb_mean      = mean(redcard$any_red, na.rm = TRUE),
     RedCardProb_sd        = sd(redcard$any_red, na.rm = TRUE),
+    BO_mean               = mean(data$p_odds_team, na.rm = T),
+    BO_sd                 = sd(data$p_odds_team, na.rm = T),
     Obs_player_game       = data %>% distinct(gamenu, player) %>% nrow(),
     Obs_team_game         = n_distinct(team, gamenu),
     
