@@ -26,8 +26,6 @@ library(brms)
 library(loo)
 library(brms)
 library(bayesplot)
-
-dir.create("ppc_prior_hier", showWarnings = FALSE)
 ```
 
 ```{r}
@@ -541,6 +539,7 @@ nrow(data_base)
 
 
 # Setup Table 2 ----
+
 ```{r}
 # ============================================================
 # (A) HIERARCHICAL priors (for models with (1 | player) etc.)
@@ -590,19 +589,18 @@ priors_col4 <- c(
   set_prior("normal(0, 2.5)",     class = "b", coef = "p_odds_draw_c")
 )
 
-
 priors_col5 <- c(
   priors_base,
-  set_prior("normal(0, 0.10)", class = "b", coef = "playersprints_c"),
-  set_prior("normal(0, 0.40)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.10)",  class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.40)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.06)",  class = "b", coef = "player_cumsections_c"),
   set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.15)",  class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteaminj_sec_pre"),
   set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
 )
 
@@ -611,7 +609,6 @@ priors_col6 <- c(
   set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
 )
 
-# Base priors (Table 2, game-level: column 7)
 priors_base_col7 <- c(
   set_prior("normal(-2.2, 0.3)", class = "Intercept"),
   set_prior("student_t(3, 0, 1)", class = "sd", group = "player", lb = 0),
@@ -620,8 +617,8 @@ priors_base_col7 <- c(
 
 priors_col7 <- c(
   priors_base_col7,
-  set_prior("normal(0, 0.05)", class = "b", coef = "plaavspeed_game_c"),
-  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.05)",  class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)",   class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 )
 
@@ -632,99 +629,58 @@ priors_col7 <- c(
 
 priors_fixef_base <- c(
   set_prior("normal(-4.6, 0.3)", class = "Intercept"),
-  set_prior("normal(0, 0.4)",    class = "b")  # applies to all FE dummies unless overridden
-) 
+  set_prior("normal(0, 0.4)",    class = "b")
+)
 
-### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
 priors_fixef_col1 <- c(
   priors_fixef_base,
   set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
 )
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%.  
 
-
-### Column 2: add dhomegame, rank_gap_c, player_cumsections_c, player_cumsections_2_c
 priors_fixef_col2 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c"),
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%. 
-  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
+  set_prior("normal(0, 0.08)",  class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
+  set_prior("normal(0, 0.06)",  class = "b", coef = "player_cumsections_c"),
   set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c")
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
 )
 
-
-### Column 3: add pre-match / lagged controls
-### dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c + player_cumsections_c + player_cumsections_2_c +
-###             scoregap_pre_c + dteamgoal_pre + dplagoal_pre + dteamred_pre + dteaminj_sec_pre +
-###             team_avespeed_pre_c + factors
 priors_fixef_col3 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c"),
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%.
-set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
+  set_prior("normal(0, 0.08)",  class = "b", coef = "plaavspeed_c"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
+  set_prior("normal(0, 0.06)",  class = "b", coef = "player_cumsections_c"),
   set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-#We are saying that having a score advantage of 4 goals changes the probability to score compared having 4 less goals than the oppononte to between (0.009 ; 0.098) so 0.01% to 9.8%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-#We are saying that the team scoring a goal in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-#We are saying that scoring a goal yourself in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-#We are saying that your team getting a red card in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
-#We are saying that your team getting a injury in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
+  set_prior("normal(0, 0.15)",  class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteaminj_sec_pre"),
   set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
-#We are saying that a team running 49km/h in the section before changes the likelyhood of scoring agoal compared to team running 0km/h between (0.0008 ; 0.103) so 0.01% to 10,3%.
-)
-
-
-
-### Column 4: plus crowd & betting odds
-### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
-priors_fixef_col4 <- c(
-  priors_fixef_col3,  # all priors from col3 +
-  set_prior("normal(0, 4.8e-05)", class = "b", coef = "team_crowd_c"),
-#We are saying that a team having  25180 home crowd members changes the probability of scoring a goal compared to having 6 homecrowd members by (0.0008 ; 0.10) so 0.01% to 10%.
-  set_prior("normal(0, 4.8e-05)", class = "b", coef = "opp_crowd_c"),
-#We are saying that a team having  25180 opp crowd members changes the probability of scoring a goal compared to having 6 oppcrowd members by (0.0008 ; 0.10) so 0.01% to 10%.
-  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_team_c"),
-#We are saying that a team having as 0.75 chance of wining compared to 0.05 changes the probability of a goal to be between  (0.00q ; 0.08) so 0.0q% to 8.6%.
-  set_prior("normal(0, 2.5)", class = "b", coef = "p_odds_draw_c")
-#We are saying that a team having as 0.33 chance of an draw compared to 0.14changes the probability of a goal to be between  (0.003 ; 0.025) so 0.03% to 2.5%.
 )
 
 priors_fixef_col4 <- c(
   priors_fixef_col3,
   set_prior("normal(0, 4.8e-05)", class = "b", coef = "team_crowd_c"),
   set_prior("normal(0, 4.8e-05)", class = "b", coef = "opp_crowd_c"),
-  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_team_c"),
-  set_prior("normal(0, 2.5)", class = "b", coef = "p_odds_draw_c")
+  set_prior("normal(0, 1.5)",     class = "b", coef = "p_odds_team_c"),
+  set_prior("normal(0, 2.5)",     class = "b", coef = "p_odds_draw_c")
 )
 
 priors_fixef_col5 <- c(
   priors_fixef_base,
-  set_prior("normal(0, 0.10)", class = "b", coef = "playersprints_c"),
-  set_prior("normal(0, 0.40)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.10)",  class = "b", coef = "playersprints_c"),
+  set_prior("normal(0, 0.40)",  class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
+  set_prior("normal(0, 0.06)",  class = "b", coef = "player_cumsections_c"),
   set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
+  set_prior("normal(0, 0.15)",  class = "b", coef = "scoregap_pre_c"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamgoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dplagoal_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteamred_pre"),
+  set_prior("normal(0, 0.4)",   class = "b", coef = "dteaminj_sec_pre"),
   set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
 )
 
@@ -733,19 +689,17 @@ priors_fixef_col6 <- c(
   set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
 )
 
-# Column 7 (game-level): no "sd" priors; still include generic b for the FE dummies
 priors_fixef_base_col7 <- c(
   set_prior("normal(-2.2, 0.3)", class = "Intercept"),
-  set_prior("normal(0, 0.5)", class = "b")
+  set_prior("normal(0, 0.5)",    class = "b")
 )
 
 priors_fixef_col7 <- c(
   priors_fixef_base_col7,
-  set_prior("normal(0, 0.05)", class = "b", coef = "plaavspeed_game_c"),
-  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
+  set_prior("normal(0, 0.05)",  class = "b", coef = "plaavspeed_game_c"),
+  set_prior("normal(0, 0.5)",   class = "b", coef = "dhomegame"),
   set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
 )
-
 ```
 
 ```{r}
@@ -1057,6 +1011,83 @@ ggsave("col4_ppcheck_hier.png", p_col4_hier)
 
 saveRDS(m_col4_hier_prior, "m_col4_hier_prior.rds")
 
+```
+
+```{r}
+m_col5_hier_prior <- brm(
+  dplagoal ~ playersprints_c + dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre + team_avespeed_pre_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data      = data_col356,
+  family    = bernoulli(link = "logit"),
+  prior     = priors_col5,
+  sample_prior = "only",
+  backend   = "cmdstanr",
+  threads   = threading(threads_per_chain),
+  chains    = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)
+)
+p_col5_hier <- pp_check(m_col5_hier_prior, ndraws = 100)
+ggsave("col5_ppcheck_hier.png", p_col5_hier)
+```
+
+```{r}
+m_col6_hier_prior <- brm(
+  dplagoal ~ playersprints_c + dhomegame + rank_gap_c +
+    player_cumsections_c + player_cumsections_2_c +
+    scoregap_pre_c + dteamgoal_pre + dplagoal_pre +
+    dteamred_pre + dteaminj_sec_pre + team_avespeed_pre_c +
+    (1 | player) + (1 | gamenu) + (1 | section),
+  data      = data_col356,
+  family    = bernoulli(link = "logit"),
+  prior     = priors_col5,
+  sample_prior = "only",
+  backend   = "cmdstanr",
+  threads   = threading(threads_per_chain),
+  chains    = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)
+)
+p_col6_hier <- pp_check(m_col5_hier_prior, ndraws = 100)
+ggsave("col6_ppcheck_hier.png", p_col56hier)
+```
+
+```{r}
+m_col7_hier_prior <- brm(
+  goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c +
+    (1 | player) + (1 | gamenu),
+  data      = data_col7,
+  family    = bernoulli(link = "logit"),
+  prior     = priors_col7,
+  sample_prior = "only",
+  backend   = "cmdstanr",
+  threads   = threading(threads_per_chain),
+  chains    = 4, iter = 2000, warmup = 1000, cores = 4,
+  save_pars = save_pars(all = TRUE)
+)
+p_col7_hier <- pp_check(m_col7_hier_prior, ndraws = 100)
+ggsave("col7_ppcheck_hier.png", p_col7_hier)
+```
+
+## Posterior Check Hierachical Table 2 ----
+```{r}
+p_col2_hier <- pp_check(m_col2_hier, ndraws = 100)
+ggsave("col2_posteriorcheck_hier.png", p_col2_hier)
+```
+```{r}
+conditional_effects(
+  m_col2_hier,                         
+  effects   = "plaavspeed_c",           
+  spaghetti = TRUE,
+  ndraws    = 200,
+  re_formula = NA                       
+) %>%
+  plot(
+    points = FALSE,
+    point_args = list(alpha = 1/2, size = 1),
+    line_args  = list(colour = "hotpink")
+  )
 ```
 
 # Hierarchical models Table 2 ----
@@ -1947,224 +1978,3 @@ The results indicate that the specification in Column (2), which includes team a
 
 
 
-# Ich glaube ab hier wird nicht mehr beötigt ----
-## LD Table 2 priors
-
-```{r}
-# function to check the p given a chosen coefficient and given intercept alpha 
-p_from_beta <- function(alpha, beta, x) {
-  exp(alpha + beta * x) / (1 + exp(alpha + beta * x))
-}
-
-
-# function to get the coefficient beta based on desired p given an intercept alpha
-beta_from_p <- function(p, alpha, x, eps = 1e-12) {
-  # Basic checks
-  if (any(is.na(p) | is.na(alpha) | is.na(x))) stop("Inputs contain NA.")
-  if (any(p <= 0 | p >= 1)) stop("p must be strictly between 0 and 1.")
-  if (any(abs(x) < eps)) stop("x must be non-zero (cannot divide by ~0).")
-
-  # logit(p) = log(p/(1-p))
-  logit_p <- log(p / (1 - p))
-  (logit_p - alpha) / x
-}
-
-
-
-
-## 1) Base priors: used for columns 1–6
-priors_fixef_base <- c(
-  # same intercept prior as hierarchical cols 1–6
-  set_prior("normal(-4.6, 0.3)", class = "Intercept"),
-# 1% based on paper
-  
-  # default for all coefficients (incl. factor dummies), unless overridden below
-  set_prior("normal(0, 0.4)",   class = "b")
-) 
-# We are saying that each dummy changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.  
-
-
-## 2) Column-specific priors: base + explicit priors for every covariate in that column
-
-### Column 1: dplagoal ~ plaavspeed_c + factor(player) + factor(gamenu) + factor(section)
-priors_fixef_col1 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c")
-)
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%.  
-
-
-### Column 2: add dhomegame, rank_gap_c, player_cumsections_c, player_cumsections_2_c
-priors_fixef_col2 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c"),
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%. 
-  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
-  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
-  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c")
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
-)
-
-
-### Column 3: add pre-match / lagged controls
-### dplagoal ~ plaavspeed_c + dhomegame + rank_gap_c + player_cumsections_c + player_cumsections_2_c +
-###             scoregap_pre_c + dteamgoal_pre + dplagoal_pre + dteamred_pre + dteaminj_sec_pre +
-###             team_avespeed_pre_c + factors
-priors_fixef_col3 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c"),
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%.
-set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
-  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
-  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-#We are saying that having a score advantage of 4 goals changes the probability to score compared having 4 less goals than the oppononte to between (0.009 ; 0.098) so 0.01% to 9.8%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-#We are saying that the team scoring a goal in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-#We are saying that scoring a goal yourself in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-#We are saying that your team getting a red card in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
-#We are saying that your team getting a injury in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
-#We are saying that a team running 49km/h in the section before changes the likelyhood of scoring agoal compared to team running 0km/h between (0.0008 ; 0.103) so 0.01% to 10,3%.
-)
-
-
-
-### Column 4: plus crowd & betting odds
-### dplagoal ~ plaavspeed_c + ... + team_crowd_c + opp_crowd_c + p_odds_team_c + p_odds_draw_c + factors
-priors_fixef_col4 <- c(
-  priors_fixef_col3,  # all priors from col3 +
-  set_prior("normal(0, 4.8e-05)", class = "b", coef = "team_crowd_c"),
-#We are saying that a team having  25180 home crowd members changes the probability of scoring a goal compared to having 6 homecrowd members by (0.0008 ; 0.10) so 0.01% to 10%.
-  set_prior("normal(0, 4.8e-05)", class = "b", coef = "opp_crowd_c"),
-#We are saying that a team having  25180 opp crowd members changes the probability of scoring a goal compared to having 6 oppcrowd members by (0.0008 ; 0.10) so 0.01% to 10%.
-  set_prior("normal(0, 1.5)", class = "b", coef = "p_odds_team_c"),
-#We are saying that a team having as 0.75 chance of wining compared to 0.05 changes the probability of a goal to be between  (0.00q ; 0.08) so 0.0q% to 8.6%.
-  set_prior("normal(0, 2.5)", class = "b", coef = "p_odds_draw_c")
-#We are saying that a team having as 0.33 chance of an draw compared to 0.14changes the probability of a goal to be between  (0.003 ; 0.025) so 0.03% to 2.5%.
-)
-
-### Column 5: sprint effort instead of plaavspeed_c
-### dplagoal ~ playersprints_c + same controls as col3 + factors
-priors_fixef_col5 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.1)", class = "b", coef = "playersprints_c"),
-#we are saying that a player having ran 12 times in this section compared to zero changes the probability of scoring between (0.0009 ; 0.9975) so 0.1% to 10%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
-  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
-  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-#We are saying that having a score advantage of 4 goals changes the probability to score compared having 4 less goals than the oppononte to between (0.009 ; 0.098) so 0.01% to 9.8%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-#We are saying that the team scoring a goal in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-#We are saying that scoring a goal yourself in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-#We are saying that your team getting a red card in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
-#We are saying that your team getting a injury in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
-#We are saying that a team running 49km/h in the section before changes the likelyhood of scoring agoal compared to team running 0km/h between (0.0008 ; 0.103) so 0.01% to 10,3%.
-)
-
-### Column 6: both plaavspeed_c and playersprints_c + same controls as col5
-priors_fixef_col6 <- c(
-  priors_fixef_base,
-  set_prior("normal(0, 0.08)", class = "b", coef = "plaavspeed_c"),
-# We are saying that running at top speed 12km/h changes the probability to score compared to 0km/h between (0.0014 ; 0.064) so 0.1% to 6.4%.
-  set_prior("normal(0, 0.1)", class = "b", coef = "playersprints_c"),
-#we are saying that a player having ran 12 times in this section compared to zero changes the probability of scoring between (0.0009 ; 0.9975) so 0.1% to 10%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dhomegame"),
-# We are saying that playing at home changes the probability to score to between (0.0045 ; 0.0218) so 0.45% to 2.18%.
-  set_prior("normal(0, 0.045)", class = "b", coef = "rank_gap_c"),
-# We are saying that playing someone that is 13 positions under you changes the probability to score compared to playing someone 13 position above you between (0.0009 ; 0.094) so 0.0% to 9.4%.
-  set_prior("normal(0, 0.06)", class = "b", coef = "player_cumsections_c"),
-#We are saying that playing 19 sections cumulatively changes the probability to score compared to playing only one section between (0.0009 ; 0.088) so 0.01% to 8.8%.
-  set_prior("normal(0, 0.003)", class = "b", coef = "player_cumsections_2_c"),
-#We are saying that playing 361 squaredsection-units cumulatively changes the probability to score compared to playing only one squaredsection-unit between (0.0011 ; 0.079) so 0.01% to 7.9%.
-  set_prior("normal(0, 0.15)", class = "b", coef = "scoregap_pre_c"),
-#We are saying that having a score advantage of 4 goals changes the probability to score compared having 4 less goals than the oppononte to between (0.009 ; 0.098) so 0.01% to 9.8%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamgoal_pre"),
-#We are saying that the team scoring a goal in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dplagoal_pre"),
-#We are saying that scoring a goal yourself in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteamred_pre"),
-#We are saying that your team getting a red card in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.4)", class = "b", coef = "dteaminj_sec_pre"),
-#We are saying that your team getting a injury in the section before changes the probability to score a goal to be between  0.45% and 2.18%.
-  set_prior("normal(0, 0.025)", class = "b", coef = "team_avespeed_pre_c")
-#We are saying that a team running 49km/h in the section before changes the likelyhood of scoring agoal compared to team running 0km/h between (0.0008 ; 0.103) so 0.01% to 10,3%.
-)
-
-## 3) Column 7: game-level model, wider priors like hierarchical priors_base_col7
-
-#estimate average goal probability in game to get an intercept estimate
-mean(data_col7$goal_game) # 11%
-
-priors_fixef_base_col7 <- c(
-  set_prior("normal(-2.2, 0.3)", class = "Intercept"),  
-# base value based on avg goals per game of around 11%, less or equal variation at game level
-  set_prior("normal(0, 0.5)", class = "b")           
-# all coefficients by default. We are saying the average factor turning from 0 to 1 changes the probability from ( 0.039 ; 0.231) , so 4% to 23%
-)
-
-### Column 7: goal_game ~ plaavspeed_game_c + dhomegame + rank_gap_c + factor(player) + factor(gamenu)
-priors_fixef_col7 <- c(
-  priors_fixef_base_col7,
-  set_prior("normal(0, 0.05)", class = "b", coef = "plaavspeed_game_c"),
-# We are saying that increasing the average speed in the game from 2.6 km/h to 10.2km/h changes the scoring probability from (0.04742 , 0.1978) so from 4.7% to 20%
-  set_prior("normal(0, 0.5)", class = "b", coef = "dhomegame"),
-# We are saying playing at home vs not playing playing at home changes the probability from ( 0.039 ; 0.231) , so 4% to 23%
-  set_prior("normal(0, 0.015)", class = "b", coef = "rank_gap_c")
-# We are saying playing with 13 ranks higher compared to playing with 13 ranks lower than the opponent changes the probability of winning from (0.0483 , 0.1946) so from 4.8% to 19.4%.
-)
-
-```
-
-##correction col 7 (nur intern) 
-```{r}
-draws <- posterior_samples(m_col7_hier, pars = "^b_")
-
-# intercept on probability scale
-p0 <- plogis(draws$b_Intercept)
-
-# build a table: baseline p + delta p for each coefficient (+1 unit)
-out <- bind_rows(
-  tibble(
-    term = "Intercept (probability at centered covariates)",
-    mean = mean(p0),
-    sd   = sd(p0),
-    q2.5 = quantile(p0, 0.025),
-    q97.5= quantile(p0, 0.975)
-  ),
-  bind_rows(lapply(setdiff(names(draws), "b_Intercept"), function(nm) {
-    dp <- plogis(draws$b_Intercept + draws[[nm]]) - plogis(draws$b_Intercept)
-    tibble(
-      term = paste0(nm, " (Δprob for +1 unit)"),
-      mean = mean(dp),
-      sd   = sd(dp),
-      q2.5 = quantile(dp, 0.025),
-      q97.5= quantile(dp, 0.975)
-    )
-  }))
-)
-
-out
-```
