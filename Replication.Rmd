@@ -1980,3 +1980,117 @@ The results indicate that the specification in Column (2), which includes team a
 
 
 
+
+# multicollinearity plot
+```{r}
+# table 3: multicollinearity plot
+
+
+library(brms)
+library(tidyverse)
+
+# m_t3c4 = your fitted brms model that used priors_t3c4
+post <- as_draws_df(m_t3col4) %>%
+  select(b_teamdist_c, b_oppdist_c)
+
+ggplot(post, aes(x = b_teamdist_c, y = b_oppdist_c)) +
+  geom_point(alpha = 0.12, size = 0.8) +
+  geom_density_2d() +
+  labs(
+    title = "Posterior ridge: teamdist_c vs oppdist_c",
+    x = expression(beta[teamdist_c]),
+    y = expression(beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+
+
+ols <- lm(dteamwin ~ teamdist_c + oppdist_c + dhomegame + rank_gap_c,
+          data = table3_col4)
+
+ols_pt <- tibble(
+  b_teamdist_c = coef(ols)[["teamdist_c"]],
+  b_oppdist_c  = coef(ols)[["oppdist_c"]]
+)
+
+ggplot(post, aes(x = b_teamdist_c, y = b_oppdist_c)) +
+  geom_point(alpha = 0.12, size = 0.8) +
+  geom_density_2d() +
+  geom_point(data = ols_pt, aes(x = b_teamdist_c, y = b_oppdist_c),
+             size = 4) +
+  labs(
+    title = "Posterior ridge with OLS point",
+    x = expression(beta[teamdist_c]),
+    y = expression(beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+
+
+
+post %>%
+  mutate(beta_diff = b_teamdist_c - b_oppdist_c) %>%
+  ggplot(aes(x = beta_diff)) +
+  geom_density(fill = "grey80") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Identified effect direction",
+    x = expression(beta[teamdist_c] - beta[oppdist_c])
+  ) +
+  theme_minimal()
+
+post2 <- post %>%
+  mutate(
+    beta_sum  = b_teamdist_c + b_oppdist_c,
+    beta_diff = b_teamdist_c - b_oppdist_c
+  )
+
+ggplot(post2, aes(beta_sum)) +
+  geom_density(fill = "grey85") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(title = "Identified combination: beta_teamdist + beta_oppdist",
+       x = expression(beta[teamdist] + beta[oppdist])) +
+  theme_minimal()
+
+
+library(tidybayes)
+library(dplyr)
+library(ggplot2)
+
+draws_dr <- m_t3col5 %>%
+  spread_draws(b_distance_ratio_c) %>%
+  rename(beta = b_distance_ratio_c)
+
+p_pos <- mean(draws_dr$beta > 0)
+
+# compute ONE density curve
+d <- density(draws_dr$beta, n = 2048)
+dens_df <- tibble(
+  x = d$x,
+  y = d$y,
+  above0 = d$x > 0
+)
+
+ggplot(dens_df, aes(x = x, y = y)) +
+  # fill left side (<=0)
+  geom_area(data = dens_df %>% filter(!above0),
+            fill = "grey85", alpha = 1) +
+  # fill right side (>0)
+  geom_area(data = dens_df %>% filter(above0),
+            fill = "grey55", alpha = 1) +
+  # outline of the same density curve
+  geom_line(color = "grey30", linewidth = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(
+    title = paste0(
+      "Posterior for distance_ratio_c:  P(β > 0) = ",
+      sprintf("%.3f", p_pos)
+    ),
+    x = expression(beta[distance_ratio_c]),
+    y = "Density"
+  ) +
+  theme_minimal()
+
+
+
+```
