@@ -927,6 +927,7 @@ m_col7 <- add_criterion(m_col7, c("loo", "waic"))
 saveRDS(m_col7, "m_col7.rds")
 ```
 
+lol
 
 # PP Check Hierarchical effects Table 2 ----
 ```{r}
